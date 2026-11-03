@@ -1,0 +1,8 @@
+GymLog.xcodeproj/
+Assets.xcassets/
+build/
+Payload/
+*.ipa
+*.entitlements
+WidgetInfo.plist
+.DS_Store

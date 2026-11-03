@@ -1,0 +1,75 @@
+name: GymLog
+options:
+  bundleIdPrefix: com.gymlog
+  preGenCommand: sh make-icon.sh
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.2"
+    CURRENT_PROJECT_VERSION: "3"
+    TARGETED_DEVICE_FAMILY: "1"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGNING_ALLOWED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  GymLog:
+    type: application
+    platform: iOS
+    sources:
+      - path: .
+        includes:
+          - "*.swift"
+        excludes:
+          - "Widget*.swift"
+      - Assets.xcassets
+    dependencies:
+      - target: GymLogWidget
+    entitlements:
+      path: GymLog.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.gymlog.app
+    scheme: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gymlog.app
+        PRODUCT_NAME: GymLog
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Gym Log
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    postBuildScripts:
+      - name: Ad-hoc sign with entitlements
+        basedOnDependencyAnalysis: false
+        script: |
+          APP="$TARGET_BUILD_DIR/$WRAPPER_NAME"
+          if [ -d "$APP/PlugIns/GymLogWidget.appex" ]; then
+            codesign -f -s - --entitlements "$SRCROOT/GymLogWidget.entitlements" "$APP/PlugIns/GymLogWidget.appex" || echo "warning: widget signing skipped"
+          fi
+          codesign -f -s - --entitlements "$SRCROOT/GymLog.entitlements" "$APP" || echo "warning: app signing skipped"
+  GymLogWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: .
+        includes:
+          - "Widget*.swift"
+          - "SharedSnapshot.swift"
+    info:
+      path: WidgetInfo.plist
+      properties:
+        CFBundleDisplayName: Gym Log
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: GymLogWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.gymlog.app
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gymlog.app.widget
+        PRODUCT_NAME: GymLogWidget
+        SKIP_INSTALL: YES
