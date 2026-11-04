@@ -231,6 +231,7 @@ struct WorkoutView: View {
     }
 
     /// Buzzes when the rest ends while the app is open, then tidies the bar away.
+    @MainActor
     private func watchRest() async {
         guard restEnd > 0 else { return }
         let end = restEnd
