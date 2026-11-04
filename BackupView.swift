@@ -2,19 +2,33 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+/// One document type for both exports, so the screen needs only one file exporter.
+struct ExportDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json, .commaSeparatedText] }
+    var data: Data
+    init(data: Data) { self.data = data }
+    init(configuration: ReadConfiguration) throws { data = configuration.file.regularFileContents ?? Data() }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
+}
+
 /// "Backup & restore" section on the People tab.
+///
+/// SwiftUI only reliably presents ONE .fileImporter and ONE .fileExporter per screen, so both pickers
+/// share a single importer (switched by `importMode`) and both exports share a single exporter.
 struct BackupSection: View {
+    private enum ImportMode { case folder, restore }
+    private enum ExportKind { case backup, spreadsheet }
+
     @Environment(\.modelContext) private var context
     @Query private var sessions: [Session]
     @Query private var entries: [WeightEntry]
     @Query private var bodies: [BodyWeight]
 
-    @State private var showFolderPicker = false
-    @State private var showRestorePicker = false
-    @State private var showJSONExport = false
-    @State private var showCSVExport = false
-    @State private var jsonDoc = JSONBackupDocument(data: Data())
-    @State private var csvDoc = CSVDocument(text: "")
+    @State private var importMode: ImportMode = .folder
+    @State private var showImporter = false
+    @State private var exportKind: ExportKind = .backup
+    @State private var showExporter = false
+    @State private var exportDoc = ExportDocument(data: Data())
     @State private var pending: BackupFile?
     @State private var message: String?
     @State private var refresh = 0   // bumps the status text after a backup
@@ -31,7 +45,7 @@ struct BackupSection: View {
         Section {
             if !hasHistory {
                 Button {
-                    showRestorePicker = true
+                    openImporter(.restore)
                 } label: {
                     Label("Reinstalled? Restore your backup", systemImage: "arrow.counterclockwise.icloud")
                         .bold()
@@ -39,39 +53,22 @@ struct BackupSection: View {
             }
 
             autoBackupRows
-                .fileImporter(isPresented: $showFolderPicker, allowedContentTypes: [.folder]) { result in
-                    handleFolder(result)
-                }
 
             Button {
-                do {
-                    jsonDoc = JSONBackupDocument(data: try Backup.data(context: context))
-                    showJSONExport = true
-                } catch { message = "Couldn't make the backup: \(error.localizedDescription)" }
+                export(.backup)
             } label: {
                 Label("Export backup file", systemImage: "square.and.arrow.up")
             }
-            .fileExporter(isPresented: $showJSONExport, document: jsonDoc, contentType: .json,
-                          defaultFilename: "GymLog-Backup-\(Self.stamp)") { result in
-                if case .success = result { message = "Backup file saved." }
-            }
 
             Button {
-                do {
-                    csvDoc = CSVDocument(text: try Backup.csv(context: context))
-                    showCSVExport = true
-                } catch { message = "Couldn't make the spreadsheet: \(error.localizedDescription)" }
+                export(.spreadsheet)
             } label: {
                 Label("Export spreadsheet (CSV)", systemImage: "tablecells")
-            }
-            .fileExporter(isPresented: $showCSVExport, document: csvDoc, contentType: .commaSeparatedText,
-                          defaultFilename: "GymLog-\(Self.stamp)") { result in
-                if case .success = result { message = "Spreadsheet saved." }
             }
 
             if hasHistory {
                 Button {
-                    showRestorePicker = true
+                    openImporter(.restore)
                 } label: {
                     Label("Restore from backup file", systemImage: "arrow.counterclockwise")
                 }
@@ -81,8 +78,19 @@ struct BackupSection: View {
         } footer: {
             Text("Pick a folder in iCloud Drive for auto-backup. It saves every time you log something and stays safe even if the app gets deleted. After reinstalling, pick the same folder and the app offers to bring everything back.")
         }
-        .fileImporter(isPresented: $showRestorePicker, allowedContentTypes: [.json]) { result in
-            handleRestoreFile(result)
+        .fileImporter(isPresented: $showImporter,
+                      allowedContentTypes: importMode == .folder ? [.folder] : [.json]) { result in
+            switch importMode {
+            case .folder: handleFolder(result)
+            case .restore: handleRestoreFile(result)
+            }
+        }
+        .fileExporter(isPresented: $showExporter, document: exportDoc,
+                      contentType: exportKind == .backup ? .json : .commaSeparatedText,
+                      defaultFilename: exportKind == .backup ? "GymLog-Backup-\(Self.stamp)" : "GymLog-\(Self.stamp)") { result in
+            if case .success = result {
+                message = exportKind == .backup ? "Backup file saved." : "Spreadsheet saved."
+            }
         }
         .confirmationDialog("Restore this backup?", isPresented: Binding(get: { pending != nil },
                                                                        set: { if !$0 { pending = nil } }),
@@ -131,7 +139,7 @@ struct BackupSection: View {
                 Label("Back up now", systemImage: "icloud.and.arrow.up")
             }
             Button {
-                showFolderPicker = true
+                openImporter(.folder)
             } label: {
                 Label("Change backup folder", systemImage: "folder")
             }
@@ -143,11 +151,32 @@ struct BackupSection: View {
             }
         } else {
             Button {
-                showFolderPicker = true
+                openImporter(.folder)
             } label: {
                 Label("Set up auto-backup", systemImage: "icloud.and.arrow.up")
                     .bold()
             }
+        }
+    }
+
+    // MARK: Actions
+
+    private func openImporter(_ mode: ImportMode) {
+        importMode = mode
+        // Let SwiftUI apply the new content type before the picker opens.
+        DispatchQueue.main.async { showImporter = true }
+    }
+
+    private func export(_ kind: ExportKind) {
+        do {
+            switch kind {
+            case .backup: exportDoc = ExportDocument(data: try Backup.data(context: context))
+            case .spreadsheet: exportDoc = ExportDocument(data: Data(try Backup.csv(context: context).utf8))
+            }
+            exportKind = kind
+            DispatchQueue.main.async { showExporter = true }
+        } catch {
+            message = "Couldn't make the file: \(error.localizedDescription)"
         }
     }
 
@@ -165,6 +194,9 @@ struct BackupSection: View {
                 } else {
                     AutoBackup.run(context: context)
                     refresh += 1
+                    message = AutoBackup.lastError
+                        ?? (hasHistory ? "Auto-backup is on. Your data was just backed up to \"\(url.lastPathComponent)\"."
+                                       : "Auto-backup is on. It saves once you log your first workout.")
                 }
             } catch {
                 message = "Couldn't use that folder: \(error.localizedDescription)"
