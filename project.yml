@@ -7,8 +7,8 @@ options:
     iOS: "17.0"
 settings:
   base:
-    MARKETING_VERSION: "1.2"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "1.3"
+    CURRENT_PROJECT_VERSION: "4"
     TARGETED_DEVICE_FAMILY: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -41,6 +41,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_NSCameraUsageDescription: Gym Log uses the camera to photograph meals so Claude can estimate their calories and nutrition.
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Gym Log lets you pick a meal photo so Claude can estimate its calories and nutrition.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   GymLogWidget:
     type: app-extension

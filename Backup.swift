@@ -6,10 +6,22 @@ import UniformTypeIdentifiers
 // MARK: - Backup file format
 
 struct BackupFile: Codable {
-    struct PersonRec: Codable { var id: UUID; var name: String; var goalWeight: Double?; var createdAt: Date }
+    struct PersonRec: Codable {
+        var id: UUID; var name: String; var goalWeight: Double?; var createdAt: Date
+        var calorieTarget: Double? = nil; var proteinTarget: Double? = nil
+    }
     struct SessionRec: Codable {
         var id: UUID; var personID: UUID; var dayID: String
         var startedAt: Date; var endedAt: Date?; var completedIDs: [String]; var totalCount: Int
+        var swaps: [String: String]? = nil
+    }
+    struct SetRec: Codable {
+        var id: UUID; var personID: UUID; var exerciseID: String; var date: Date
+        var setIndex: Int; var weight: Double; var reps: Int
+    }
+    struct FoodRec: Codable {
+        var id: UUID; var personID: UUID; var date: Date; var name: String
+        var calories: Double; var protein: Double; var carbs: Double; var fat: Double; var itemsJSON: String
     }
     struct WeightRec: Codable { var personID: UUID; var exerciseID: String; var weight: Double; var date: Date }
     struct BodyRec: Codable { var personID: UUID; var weight: Double; var date: Date }
@@ -25,10 +37,19 @@ struct BackupFile: Codable {
     var weights: [WeightRec]
     var bodyWeights: [BodyRec]
     var settings: SettingsRec?
+    // Added in version 2 (older backups simply don't have these).
+    var sets: [SetRec]? = nil
+    var foods: [FoodRec]? = nil
+    var program: [WorkoutDay]? = nil
+    var extras: [Exercise]? = nil
 
     var summary: String {
         let workouts = sessions.filter { $0.endedAt != nil }.count
-        return "\(people.count) \(people.count == 1 ? "person" : "people"), \(workouts) workouts, \(weights.count) weight logs"
+        var parts = ["\(people.count) \(people.count == 1 ? "person" : "people")", "\(workouts) workouts",
+                     "\(weights.count) weight logs"]
+        if let n = sets?.count, n > 0 { parts.append("\(n) sets") }
+        if let n = foods?.count, n > 0 { parts.append("\(n) meals") }
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -62,12 +83,19 @@ enum Backup {
         let sessions = try context.fetch(FetchDescriptor<Session>())
         let weights = try context.fetch(FetchDescriptor<WeightEntry>())
         let bodies = try context.fetch(FetchDescriptor<BodyWeight>())
+        let sets = try context.fetch(FetchDescriptor<SetEntry>())
+        let foods = try context.fetch(FetchDescriptor<FoodEntry>())
         let d = UserDefaults.standard
         return BackupFile(
-            people: people.map { .init(id: $0.id, name: $0.name, goalWeight: $0.goalWeight, createdAt: $0.createdAt) },
+            version: 2,
+            people: people.map {
+                .init(id: $0.id, name: $0.name, goalWeight: $0.goalWeight, createdAt: $0.createdAt,
+                      calorieTarget: $0.calorieTarget, proteinTarget: $0.proteinTarget)
+            },
             sessions: sessions.map {
                 .init(id: $0.id, personID: $0.personID, dayID: $0.dayID, startedAt: $0.startedAt,
-                      endedAt: $0.endedAt, completedIDs: $0.completedIDs, totalCount: $0.totalCount)
+                      endedAt: $0.endedAt, completedIDs: $0.completedIDs, totalCount: $0.totalCount,
+                      swaps: $0.swaps.isEmpty ? nil : $0.swaps)
             },
             weights: weights.map { .init(personID: $0.personID, exerciseID: $0.exerciseID, weight: $0.weight, date: $0.date) },
             bodyWeights: bodies.map { .init(personID: $0.personID, weight: $0.weight, date: $0.date) },
@@ -76,7 +104,18 @@ enum Backup {
                 remindersOn: d.bool(forKey: "remindersOn"),
                 reminderMinutes: d.object(forKey: "reminderMinutes") as? Int ?? 17 * 60,
                 activePersonID: d.string(forKey: "activePersonID") ?? ""
-            )
+            ),
+            sets: sets.map {
+                .init(id: $0.id, personID: $0.personID, exerciseID: $0.exerciseID, date: $0.date,
+                      setIndex: $0.setIndex, weight: $0.weight, reps: $0.reps)
+            },
+            // Meal photos are left out to keep the backup small.
+            foods: foods.map {
+                .init(id: $0.id, personID: $0.personID, date: $0.date, name: $0.name, calories: $0.calories,
+                      protein: $0.protein, carbs: $0.carbs, fat: $0.fat, itemsJSON: $0.itemsJSON)
+            },
+            program: ProgramStore.shared.days,
+            extras: ProgramStore.shared.extras
         )
     }
 
@@ -108,7 +147,7 @@ enum Backup {
             return rec.id
         }
 
-        let exercises = Program.days.flatMap(\.exercises)
+        let exercises = Program.allExercises
         func exerciseID(_ name: String) -> String? {
             exercises.first { $0.name.lowercased() == name.lowercased() || $0.id == name }?.id
         }
@@ -211,6 +250,8 @@ enum Backup {
             let person = Person(name: p.name, goalWeight: p.goalWeight)
             person.id = p.id
             person.createdAt = p.createdAt
+            person.calorieTarget = p.calorieTarget
+            person.proteinTarget = p.proteinTarget
             context.insert(person)
         }
 
@@ -222,6 +263,7 @@ enum Backup {
             session.id = s.id
             session.endedAt = s.endedAt
             session.completedIDs = s.completedIDs
+            session.swaps = s.swaps ?? [:]
             context.insert(session)
             if s.endedAt != nil { addedWorkouts += 1 }
         }
@@ -239,6 +281,30 @@ enum Backup {
             context.insert(BodyWeight(personID: b.personID, weight: b.weight, date: b.date))
         }
 
+        let setIDs = Set(try context.fetch(FetchDescriptor<SetEntry>()).map(\.id))
+        var addedSets = 0
+        for r in file.sets ?? [] where !setIDs.contains(r.id) {
+            let e = SetEntry(personID: r.personID, exerciseID: r.exerciseID, setIndex: r.setIndex,
+                             weight: r.weight, reps: r.reps, date: r.date)
+            e.id = r.id
+            context.insert(e)
+            addedSets += 1
+        }
+        let foodIDs = Set(try context.fetch(FetchDescriptor<FoodEntry>()).map(\.id))
+        var addedFoods = 0
+        for r in file.foods ?? [] where !foodIDs.contains(r.id) {
+            let e = FoodEntry(personID: r.personID, name: r.name, calories: r.calories, protein: r.protein,
+                              carbs: r.carbs, fat: r.fat, itemsJSON: r.itemsJSON, date: r.date)
+            e.id = r.id
+            context.insert(e)
+            addedFoods += 1
+        }
+        let store = ProgramStore.shared
+        if let program = file.program, !program.isEmpty { store.days = program }
+        for ex in file.extras ?? [] where !Program.allExercises.contains(where: { $0.id == ex.id }) {
+            store.extras.append(ex)
+        }
+
         if let s = file.settings {
             let d = UserDefaults.standard
             d.set(s.trainingDays, forKey: "trainingDays")
@@ -249,14 +315,17 @@ enum Backup {
             }
         }
         try context.save()
-        return "Restored \(addedWorkouts) workouts and \(addedWeights) weight logs."
+        var msg = "Restored \(addedWorkouts) workouts and \(addedWeights) weight logs"
+        if addedSets > 0 { msg += ", \(addedSets) sets" }
+        if addedFoods > 0 { msg += ", \(addedFoods) meals" }
+        return msg + "."
     }
 
     // MARK: Spreadsheet export
 
     static func csv(context: ModelContext) throws -> String {
         let people = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<Person>()).map { ($0.id, $0.name) })
-        let exercises = Dictionary(uniqueKeysWithValues: Program.days.flatMap(\.exercises).map { ($0.id, $0.name) })
+        let exercises = Dictionary(uniqueKeysWithValues: Program.allExercises.map { ($0.id, $0.name) })
         let dayNames = Dictionary(uniqueKeysWithValues: Program.days.map { ($0.id, $0.title) })
         let weights = try context.fetch(FetchDescriptor<WeightEntry>(sortBy: [SortDescriptor(\.date)]))
         let sessions = try context.fetch(FetchDescriptor<Session>(sortBy: [SortDescriptor(\.startedAt)]))

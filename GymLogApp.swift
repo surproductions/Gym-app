@@ -9,7 +9,7 @@ struct GymLogApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Person.self, Session.self, WeightEntry.self, BodyWeight.self])
+        .modelContainer(for: [Person.self, Session.self, WeightEntry.self, BodyWeight.self, SetEntry.self, FoodEntry.self])
     }
 }
 
@@ -20,6 +20,8 @@ struct ContentView: View {
     @Query private var sessions: [Session]
     @Query private var entries: [WeightEntry]
     @Query private var bodies: [BodyWeight]
+    @Query private var loggedSets: [SetEntry]
+    @Query private var foods: [FoodEntry]
     @AppStorage("activePersonID") private var activePersonID = ""
     @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,5,6"
     @AppStorage("remindersOn") private var remindersOn = false
@@ -31,6 +33,8 @@ struct ContentView: View {
                 .tabItem { Label("Workout", systemImage: "dumbbell") }
             LiftsView()
                 .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+            FoodView()
+                .tabItem { Label("Food", systemImage: "fork.knife") }
             CalendarView()
                 .tabItem { Label("Calendar", systemImage: "calendar") }
             SettingsView()
@@ -76,7 +80,9 @@ struct ContentView: View {
     private var dataSignature: String {
         let w = entries.reduce(0.0) { $0 + $1.weight + $1.date.timeIntervalSince1970 }
         let b = bodies.reduce(0.0) { $0 + $1.weight + $1.date.timeIntervalSince1970 }
-        return "\(sessionSignature)#\(entries.count)-\(w)#\(bodies.count)-\(b)#\(people.map(\.name).joined())"
+        let setSum: Double = loggedSets.reduce(0) { $0 + $1.weight * Double($1.reps) }
+        let names = people.map(\.name).joined()
+        return "\(sessionSignature)#\(entries.count)-\(w)#\(bodies.count)-\(b)#\(names)#\(loggedSets.count)-\(setSum)#\(foods.count)"
     }
 
     private func sync() {

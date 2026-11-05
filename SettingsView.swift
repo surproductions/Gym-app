@@ -54,6 +54,16 @@ struct SettingsView: View {
                     Text("A training day with no workout logged shows as missed on the calendar.")
                 }
 
+                Section {
+                    NavigationLink {
+                        ProgramEditorView()
+                    } label: {
+                        Label("Edit program", systemImage: "list.bullet.rectangle")
+                    }
+                } footer: {
+                    Text("Change days, exercises, sets, reps and rest times.")
+                }
+
                 ReminderSection()
 
                 BackupSection()
