@@ -1,6 +1,6 @@
 name: GymLog
 options:
-  bundleIdPrefix: com.gymlog
+  bundleIdPrefix: com.surproductions
   preGenCommand: sh make-icon.sh
   projectFormat: xcode15_0
   deploymentTarget:
@@ -11,7 +11,7 @@ settings:
     CURRENT_PROJECT_VERSION: "3"
     TARGETED_DEVICE_FAMILY: "1"
     SWIFT_VERSION: "5.0"
-    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
 targets:
   GymLog:
@@ -30,26 +30,17 @@ targets:
       path: GymLog.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.gymlog.app
+          - group.com.surproductions.gymlog
     scheme: {}
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gymlog.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.surproductions.gymlog
         PRODUCT_NAME: GymLog
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Gym Log
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    postBuildScripts:
-      - name: Ad-hoc sign with entitlements
-        basedOnDependencyAnalysis: false
-        script: |
-          APP="$TARGET_BUILD_DIR/$WRAPPER_NAME"
-          if [ -d "$APP/PlugIns/GymLogWidget.appex" ]; then
-            codesign -f -s - --entitlements "$SRCROOT/GymLogWidget.entitlements" "$APP/PlugIns/GymLogWidget.appex" || echo "warning: widget signing skipped"
-          fi
-          codesign -f -s - --entitlements "$SRCROOT/GymLog.entitlements" "$APP" || echo "warning: app signing skipped"
   GymLogWidget:
     type: app-extension
     platform: iOS
@@ -68,9 +59,9 @@ targets:
       path: GymLogWidget.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.gymlog.app
+          - group.com.surproductions.gymlog
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gymlog.app.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.surproductions.gymlog.widget
         PRODUCT_NAME: GymLogWidget
         SKIP_INSTALL: YES

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Shared by the app and the widget (both targets compile this file).
 enum AppGroup {
-    static let id = "group.com.gymlog.app"
+    static let id = "group.com.surproductions.gymlog"
 }
 
 enum DayPalette {
