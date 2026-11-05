@@ -34,7 +34,9 @@ struct BackupFile: Codable {
 
 enum BackupError: LocalizedError {
     case notGymLog
-    var errorDescription: String? { "That file isn't a Gym Log backup. Pick the file named GymLog-Backup.json." }
+    var errorDescription: String? {
+        "That file isn't a Gym Log backup. Pick GymLog-Backup.json, or a spreadsheet you exported from Gym Log."
+    }
 }
 
 enum Backup {
@@ -89,6 +91,103 @@ enum Backup {
         return file
     }
 
+    // MARK: Spreadsheet import (the CSV that "Export spreadsheet" makes)
+
+    static func readCSV(_ text: String, context: ModelContext) throws -> BackupFile {
+        let existing = try context.fetch(FetchDescriptor<Person>())
+        var peopleByName: [String: BackupFile.PersonRec] = [:]
+        for p in existing {
+            peopleByName[p.name.lowercased()] = .init(id: p.id, name: p.name, goalWeight: p.goalWeight, createdAt: p.createdAt)
+        }
+        func person(_ name: String) -> UUID {
+            let key = name.trimmingCharacters(in: .whitespaces).lowercased()
+            if let p = peopleByName[key] { return p.id }
+            let rec = BackupFile.PersonRec(id: UUID(), name: name.trimmingCharacters(in: .whitespaces),
+                                           goalWeight: nil, createdAt: .now)
+            peopleByName[key] = rec
+            return rec.id
+        }
+
+        let exercises = Program.days.flatMap(\.exercises)
+        func exerciseID(_ name: String) -> String? {
+            exercises.first { $0.name.lowercased() == name.lowercased() || $0.id == name }?.id
+        }
+        func day(_ name: String) -> WorkoutDay? {
+            Program.days.first { $0.title.lowercased() == name.lowercased() || $0.id == name }
+        }
+
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        let formats = ["yyyy-MM-dd", "M/d/yyyy", "M/d/yy", "MM/dd/yyyy"]
+        func date(_ str: String, hour: Int) -> Date? {
+            for f in formats {
+                df.dateFormat = f
+                if let d = df.date(from: str.trimmingCharacters(in: .whitespaces)) {
+                    return Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: d)
+                }
+            }
+            return nil
+        }
+        func number(_ str: String) -> Double? {
+            Double(str.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
+        }
+
+        var weights: [BackupFile.WeightRec] = []
+        var sessions: [BackupFile.SessionRec] = []
+        var bodies: [BackupFile.BodyRec] = []
+        var section = ""
+        for raw in text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+            .components(separatedBy: "\n") {
+            let cols = parseCSVLine(raw)
+            guard let first = cols.first?.trimmingCharacters(in: .whitespaces), !first.isEmpty else { continue }
+            switch first.uppercased() {
+            case "WEIGHTS", "WORKOUTS", "BODY WEIGHT": section = first.uppercased(); continue
+            case "DATE": continue   // column headers
+            default: break
+            }
+            switch section {
+            case "WEIGHTS" where cols.count >= 4:
+                if let d = date(cols[0], hour: 12), let ex = exerciseID(cols[2]), let w = number(cols[3]) {
+                    weights.append(.init(personID: person(cols[1]), exerciseID: ex, weight: w, date: d))
+                }
+            case "WORKOUTS" where cols.count >= 4:
+                if let start = date(cols[0], hour: 17), let dd = day(cols[2]) {
+                    let done = min(Int(number(cols[3]) ?? 0), dd.exercises.count)
+                    let minutes = cols.count >= 7 ? (number(cols[6]) ?? 45) : 45
+                    sessions.append(.init(id: UUID(), personID: person(cols[1]), dayID: dd.id, startedAt: start,
+                                          endedAt: start.addingTimeInterval(minutes * 60),
+                                          completedIDs: Array(dd.exercises.prefix(done).map(\.id)),
+                                          totalCount: dd.exercises.count))
+                }
+            case "BODY WEIGHT" where cols.count >= 3:
+                if let d = date(cols[0], hour: 8), let w = number(cols[2]) {
+                    bodies.append(.init(personID: person(cols[1]), weight: w, date: d))
+                }
+            default: break
+            }
+        }
+        guard !weights.isEmpty || !sessions.isEmpty || !bodies.isEmpty else { throw BackupError.notGymLog }
+        return BackupFile(people: Array(peopleByName.values), sessions: sessions, weights: weights,
+                          bodyWeights: bodies, settings: nil)
+    }
+
+    /// Splits one CSV line, handling quoted fields with commas and doubled quotes.
+    static func parseCSVLine(_ line: String) -> [String] {
+        var out: [String] = [], cur = "", inQuotes = false
+        var chars = Array(line)[...]
+        while let c = chars.popFirst() {
+            if inQuotes {
+                if c == "\"" {
+                    if chars.first == "\"" { cur.append("\""); chars.removeFirst() } else { inQuotes = false }
+                } else { cur.append(c) }
+            } else if c == "\"" { inQuotes = true }
+            else if c == "," { out.append(cur); cur = "" }
+            else { cur.append(c) }
+        }
+        out.append(cur)
+        return out
+    }
+
     // MARK: Restore (merges: nothing already in the app is deleted or duplicated)
 
     @discardableResult
@@ -116,7 +215,9 @@ enum Backup {
         }
 
         let sessionIDs = Set(sessions.map(\.id))
-        for s in file.sessions where !sessionIDs.contains(s.id) {
+        var sessionKeys = Set(sessions.map { "\($0.personID)|\($0.dayID)|\(cal.startOfDay(for: $0.startedAt).timeIntervalSince1970)" })
+        for s in file.sessions where !sessionIDs.contains(s.id)
+            && sessionKeys.insert("\(s.personID)|\(s.dayID)|\(cal.startOfDay(for: s.startedAt).timeIntervalSince1970)").inserted {
             let session = Session(personID: s.personID, dayID: s.dayID, totalCount: s.totalCount, startedAt: s.startedAt)
             session.id = s.id
             session.endedAt = s.endedAt

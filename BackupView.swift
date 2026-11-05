@@ -70,7 +70,7 @@ struct BackupSection: View {
                 Button {
                     openImporter(.restore)
                 } label: {
-                    Label("Restore from backup file", systemImage: "arrow.counterclockwise")
+                    Label("Restore from backup or spreadsheet", systemImage: "arrow.counterclockwise")
                 }
             }
         } header: {
@@ -79,7 +79,7 @@ struct BackupSection: View {
             Text("Pick a folder in iCloud Drive for auto-backup. It saves every time you log something and stays safe even if the app gets deleted. After reinstalling, pick the same folder and the app offers to bring everything back.")
         }
         .fileImporter(isPresented: $showImporter,
-                      allowedContentTypes: importMode == .folder ? [.folder] : [.json]) { result in
+                      allowedContentTypes: importMode == .folder ? [.folder] : [.json, .commaSeparatedText, .plainText]) { result in
             switch importMode {
             case .folder: handleFolder(result)
             case .restore: handleRestoreFile(result)
@@ -212,7 +212,12 @@ struct BackupSection: View {
             let ok = url.startAccessingSecurityScopedResource()
             defer { if ok { url.stopAccessingSecurityScopedResource() } }
             do {
-                pending = try Backup.read(try Data(contentsOf: url))
+                let data = try Data(contentsOf: url)
+                if url.pathExtension.lowercased() == "json" || data.first == UInt8(ascii: "{") {
+                    pending = try Backup.read(data)
+                } else {
+                    pending = try Backup.readCSV(String(decoding: data, as: UTF8.self), context: context)
+                }
             } catch {
                 message = error.localizedDescription
             }
