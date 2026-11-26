@@ -246,6 +246,17 @@ struct CheckInSection: View {
             for e in w { if let ex = Program.exercise(e.exerciseID) { lines.append("- \(ex.name): \(formatWeight(e.weight)) lb") } }
         }
 
+        // Program and current working weights, so Claude can prescribe exact numbers
+        lines.append("\nCURRENT PROGRAM (exercise [sets x reps, weight step] current working weight):")
+        for day in ProgramStore.shared.days {
+            lines.append("\(day.title):")
+            for ex in day.exercises {
+                let w = weights.filter { $0.exerciseID == ex.id }.max { $0.date < $1.date }?.weight
+                let wText = ex.weighted ? (w.map { formatWeight($0) + " lb" + (ex.isAssisted ? " assist" : "") } ?? "no weight logged") : "bodyweight"
+                lines.append("  - \(ex.name) [\(ex.scheme), step \(formatWeight(ex.step)) lb]: \(wText)")
+            }
+        }
+
         // Food and water
         let foodDays = Dictionary(grouping: foods.filter { $0.date >= start }) { cal.startOfDay(for: $0.date) }
         let kcalTarget = person.calorieTarget ?? FoodTargets.suggestedCalories(bodyWeight: bw.last?.weight, goal: person.goalWeight)
@@ -264,10 +275,12 @@ struct CheckInSection: View {
         lines.append("\nWATER: " + waterLines.joined(separator: "; "))
 
         return """
-        You are a friendly, practical strength coach inside a gym app. Review this person's last 7 days and write their weekly check-in.
-        Rules: under 220 words. Use exactly these markdown headings: "## Wins", "## Watch out", "## Next week" (3 specific, doable bullets).
-        Be specific with their numbers. If food or water wasn't logged, say tracking more would help instead of guessing.
-        Tie advice to their body-weight goal (gaining or losing). No medical claims. Plain, encouraging language.
+        You are a practical strength coach inside a gym app. Review this person's last 7 days and tell them exactly what to change next week.
+        Use exactly these markdown headings, in this order:
+        "## Change this week": 3 to 5 bullets, the most important first. Each one must be a concrete action with numbers, e.g. "Overhead press: go up to 100 lb for 3x8" or "Swap leg press for hack squat because...". Cover lifts to increase, hold or drop (use their rep target and weight step: if they hit the top of the rep range on every set, add one step; if they missed reps, hold), any program change (sets, swaps, a missed day), and food or water targets (calories, protein, ounces) tied to their body-weight goal. If something is going well and shouldn't change, say "keep" in one bullet.
+        "## Wins": 2 to 3 short bullets with their numbers.
+        "## Watch out": 1 to 3 short bullets.
+        Rules: under 300 words total. For assisted exercises a lower weight means less help (progress). If food or water wasn't logged, say so and give the target instead of guessing. No medical claims. Plain, direct, encouraging language.
 
         DATA:
         \(lines.joined(separator: "\n"))
