@@ -1,5 +1,4 @@
 import Foundation
-import HealthKit
 import UIKit
 import UserNotifications
 import WidgetKit
@@ -183,10 +182,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
-    /// Lets the Watch app ask for Health access (heart rate during workouts).
-    func applicationShouldRequestHealthAuthorization(_ application: UIApplication) {
-        HKHealthStore().handleAuthorizationForExtension { _, _ in }
-    }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
