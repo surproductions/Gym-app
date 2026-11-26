@@ -85,6 +85,7 @@ struct LiftsView: View {
                 }
             }
             .navigationTitle("Progress")
+            .themedBackground()
         }
     }
 }

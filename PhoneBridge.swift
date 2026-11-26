@@ -1,6 +1,21 @@
 import Foundation
+import Observation
 import SwiftData
 import WatchConnectivity
+
+/// The heart rate the Watch is sending during a workout.
+@Observable
+final class LiveHeart {
+    static let shared = LiveHeart()
+    var bpm: Double?
+    var updated: Date?
+
+    /// Only shown while it's fresh.
+    var current: Int? {
+        guard let bpm, let updated, Date.now.timeIntervalSince(updated) < 45 else { return nil }
+        return Int(bpm)
+    }
+}
 
 /// iPhone side of the Apple Watch link: sends today's workout and water, and saves sets and water logged on the Watch.
 final class PhoneBridge: NSObject, WCSessionDelegate {
@@ -80,6 +95,26 @@ final class PhoneBridge: NSObject, WCSessionDelegate {
                   let weight = message[WatchKeys.weight] as? Double,
                   let reps = message[WatchKeys.reps] as? Int, reps > 0 else { return }
             logSet(context, person: person, slotID: slotID, ex: ex, weight: weight, reps: reps)
+        case WatchKeys.heartLive:
+            if let bpm = message[WatchKeys.bpm] as? Double {
+                LiveHeart.shared.bpm = bpm
+                LiveHeart.shared.updated = .now
+            }
+            return
+        case WatchKeys.heartSummary:
+            guard let start = message[WatchKeys.start] as? Double, let end = message[WatchKeys.end] as? Double else { return }
+            let startDate = Date(timeIntervalSince1970: start), endDate = Date(timeIntervalSince1970: end)
+            let sessions = ((try? context.fetch(FetchDescriptor<Session>())) ?? []).filter { $0.personID == person.id }
+            // The workout that overlaps the Watch's tracking the most (or the closest one that day).
+            let match = sessions
+                .filter { Calendar.current.isDate($0.startedAt, inSameDayAs: startDate) }
+                .min { abs($0.startedAt.timeIntervalSince(startDate)) < abs($1.startedAt.timeIntervalSince(startDate)) }
+            guard let s = match else { return }
+            if let v = message[WatchKeys.avgHR] as? Double, v > 0 { s.avgHeartRate = v }
+            if let v = message[WatchKeys.maxHR] as? Double, v > 0 { s.maxHeartRate = v }
+            if let v = message[WatchKeys.kcal] as? Double, v > 0 { s.activeCalories = v }
+            _ = endDate
+            LiveHeart.shared.bpm = nil
         case WatchKeys.toggleDone:
             guard let slotID = message[WatchKeys.slotID] as? String else { return }
             let s = session(context, person: person)

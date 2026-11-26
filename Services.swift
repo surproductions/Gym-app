@@ -1,4 +1,5 @@
 import Foundation
+import HealthKit
 import UIKit
 import UserNotifications
 import WidgetKit
@@ -8,6 +9,9 @@ import WidgetKit
 enum Planner {
     /// The day after the most recent finished workout's day. `finished` must be sorted oldest → newest.
     static func nextDay(finished: [Session]) -> WorkoutDay {
+        if TrainingSettings.splitMode == .weekdays {
+            return MissedDays.weekdayDay(for: .now, trainingDays: Goals.trainingDays)
+        }
         guard let last = finished.last else { return Program.days[0] }
         let i = Program.index(of: last.dayID)
         return Program.days[(i + 1) % Program.days.count]
@@ -46,7 +50,7 @@ enum SnapshotWriter {
             .filter { week?.contains($0.startedAt) ?? false }
             .map { cal.startOfDay(for: $0.startedAt) })
 
-        let snap = WidgetSnapshot(
+        var snap = WidgetSnapshot(
             personName: person.name,
             currentShort: current.short, currentTitle: current.title,
             currentColor: Program.index(of: current.id),
@@ -58,6 +62,7 @@ enum SnapshotWriter {
             weekStart: week?.start ?? cal.startOfDay(for: .now),
             waterOz: waterOz, waterGoalOz: waterGoalOz, waterDay: .now, waterInML: WaterSettings.inML
         )
+        snap.live = live == nil ? nil : WidgetSnapshot.load()?.live
         snap.save()
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -178,9 +183,65 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
+    /// Lets the Watch app ask for Health access (heart rate during workouts).
+    func applicationShouldRequestHealthAuthorization(_ application: UIApplication) {
+        HKHealthStore().handleAuthorizationForExtension { _, _ in }
+    }
+
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .sound])
+    }
+}
+
+// MARK: - Smart nudge: "you usually start by now"
+
+enum SmartReminders {
+    static let key = "smartRemindersOn"
+    private static let days = 14
+
+    /// Usual start time (minutes after midnight): the median of recent workouts, once there are at least 3.
+    static func usualStart(sessions: [Session], personID: UUID) -> Int? {
+        let cal = Calendar.current
+        let cutoff = cal.date(byAdding: .day, value: -42, to: .now) ?? .now
+        let starts = sessions
+            .filter { $0.personID == personID && $0.isFinished && $0.startedAt >= cutoff }
+            .map { cal.component(.hour, from: $0.startedAt) * 60 + cal.component(.minute, from: $0.startedAt) }
+            .sorted()
+        guard starts.count >= 3 else { return nil }
+        return starts[starts.count / 2]
+    }
+
+    static func reschedule(enabled: Bool, trainingDays: Set<Int>, person: Person?, sessions: [Session]) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: (0..<days).map { "smart-\($0)" })
+        guard enabled, let person, let usual = usualStart(sessions: sessions, personID: person.id) else { return }
+
+        let cal = Calendar.current
+        let mine = sessions.filter { $0.personID == person.id }
+        let startedToday = mine.contains { cal.isDateInToday($0.startedAt) }
+        let next = Planner.nextDay(finished: Planner.finishedSorted(sessions, personID: person.id))
+        let nudge = min(usual + 60, 23 * 60 + 30)
+        let usualText = cal.date(bySettingHour: usual / 60, minute: usual % 60, second: 0, of: .now)?
+            .formatted(date: .omitted, time: .shortened) ?? ""
+        let today = cal.startOfDay(for: .now)
+
+        for offset in 0..<days {
+            guard let day = cal.date(byAdding: .day, value: offset, to: today),
+                  trainingDays.contains(cal.component(.weekday, from: day)),
+                  let fire = cal.date(bySettingHour: nudge / 60, minute: nudge % 60, second: 0, of: day),
+                  fire > .now else { continue }
+            if offset == 0 && startedToday { continue }
+            let content = UNMutableNotificationContent()
+            content.title = "Still hitting the gym today?"
+            content.body = offset == 0
+                ? "You usually start around \(usualText). \(next.short) day is waiting. Even a short workout counts."
+                : "You usually start around \(usualText). Even a 30-minute session keeps the streak alive."
+            content.sound = .default
+            let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: fire)
+            center.add(UNNotificationRequest(identifier: "smart-\(offset)", content: content,
+                                             trigger: UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)))
+        }
     }
 }

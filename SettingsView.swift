@@ -66,10 +66,15 @@ struct SettingsView: View {
 
                 ReminderSection()
 
+                CalendarSyncSection()
+
+                ThemeSection()
+
                 BackupSection()
             }
             .scrollDismissesKeyboard(.immediately)
             .navigationTitle("People")
+            .themedBackground()
             .confirmationDialog(
                 "Delete \(personToDelete?.name ?? "")?",
                 isPresented: Binding(get: { personToDelete != nil }, set: { if !$0 { personToDelete = nil } }),
@@ -219,7 +224,18 @@ struct WeekdayPicker: View {
 struct ReminderSection: View {
     @AppStorage("remindersOn") private var remindersOn = false
     @AppStorage("reminderMinutes") private var reminderMinutes = 17 * 60
+    @AppStorage(SmartReminders.key) private var smartOn = false
+    @AppStorage("activePersonID") private var activePersonID = ""
+    @Query private var sessions: [Session]
+    @Query(sort: \Person.createdAt) private var people: [Person]
     @State private var showDenied = false
+
+    private var usualText: String? {
+        guard let p = people.first(where: { $0.id.uuidString == activePersonID }) ?? people.first,
+              let m = SmartReminders.usualStart(sessions: sessions, personID: p.id),
+              let d = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now) else { return nil }
+        return d.formatted(date: .omitted, time: .shortened)
+    }
 
     private var time: Binding<Date> {
         Binding(
@@ -240,10 +256,21 @@ struct ReminderSection: View {
             if remindersOn {
                 DatePicker("Remind me at", selection: time, displayedComponents: .hourAndMinute)
             }
+            Toggle("Smart nudge", isOn: $smartOn)
         } header: {
             Text("Reminders")
         } footer: {
-            Text("On your training days you'll get a reminder with a bit of motivation. It's skipped if you've already been that day.")
+            Text("On your training days you'll get a reminder with a bit of motivation. It's skipped if you've already been that day.\n\nSmart nudge: if you haven't started an hour after your usual time, you get a nudge. Rest days are skipped. "
+                 + (usualText.map { "You usually start around \($0)." } ?? "It learns your usual time after 3 workouts."))
+        }
+        .onChange(of: smartOn) { _, on in
+            guard on else { return }
+            Task {
+                if !(await Reminders.requestPermission()) {
+                    smartOn = false
+                    showDenied = true
+                }
+            }
         }
         .onChange(of: remindersOn) { _, on in
             guard on else { return }

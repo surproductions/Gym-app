@@ -44,6 +44,13 @@ struct ContentView: View {
     @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,4,5,6"
     @AppStorage("remindersOn") private var remindersOn = false
     @AppStorage("reminderMinutes") private var reminderMinutes = 17 * 60
+    @AppStorage(SmartReminders.key) private var smartReminders = false
+    @AppStorage(CalendarSync.onKey) private var calendarSyncOn = false
+    @AppStorage(CalendarSync.minutesKey) private var calendarMinutes = 17 * 60
+    @AppStorage(CalendarSync.lengthKey) private var calendarLength = 60
+    @AppStorage(CalendarSync.nonceKey) private var calendarNonce = 0
+    @AppStorage(TrainingSettings.splitModeKey) private var splitMode = SplitMode.shift.rawValue
+    @AppStorage(ThemeSettings.key) private var themeID = Theme.classic.id
 
     var body: some View {
         TabView {
@@ -58,6 +65,9 @@ struct ContentView: View {
             SettingsView()
                 .tabItem { Label("People", systemImage: "person.2") }
         }
+        .tint(Theme.named(themeID).accent)
+        .fontDesign(Theme.named(themeID).font)
+        .preferredColorScheme(Theme.named(themeID).scheme)
         .task {
             if people.isEmpty {
                 let me = Person(name: "Me", goalWeight: 160)
@@ -78,6 +88,12 @@ struct ContentView: View {
         .onChange(of: trainingDaysRaw) { _, _ in sync() }
         .onChange(of: remindersOn) { _, _ in sync() }
         .onChange(of: reminderMinutes) { _, _ in sync() }
+        .onChange(of: smartReminders) { _, _ in sync() }
+        .onChange(of: calendarSyncOn) { _, _ in sync() }
+        .onChange(of: calendarMinutes) { _, _ in sync() }
+        .onChange(of: calendarLength) { _, _ in sync() }
+        .onChange(of: calendarNonce) { _, _ in sync() }
+        .onChange(of: splitMode) { _, _ in sync() }
         .onChange(of: waterSignature) { _, _ in syncWater() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { ingestWidgetWater(); syncWater() }
@@ -177,6 +193,12 @@ struct ContentView: View {
                               waterOz: waterToday, waterGoalOz: waterGoal)
         Reminders.reschedule(enabled: remindersOn, minutesOfDay: reminderMinutes,
                              trainingDays: days, person: person, sessions: sessions)
+        SmartReminders.reschedule(enabled: smartReminders, trainingDays: days, person: person, sessions: sessions)
+        if let person {
+            let finished = Planner.finishedSorted(sessions, personID: person.id)
+            CalendarSync.sync(trainingDays: days, next: Planner.nextDay(finished: finished),
+                              wentToday: finished.contains { Calendar.current.isDateInToday($0.startedAt) })
+        }
         if let person { scheduleRecap(person, days: days) }
         PhoneBridge.shared.pushContext()
     }

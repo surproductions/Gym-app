@@ -1,4 +1,5 @@
 import SwiftUI
+import ActivityKit
 
 /// Shared by the app and the widget (both targets compile this file).
 enum AppGroup {
@@ -37,6 +38,8 @@ struct WidgetSnapshot: Codable {
     var waterGoalOz: Double? = nil
     var waterDay: Date? = nil
     var waterInML: Bool? = nil
+    // the workout going on right now (nil when none)
+    var live: LiveWorkoutInfo? = nil
 
     static let key = "widgetSnapshot"
 
@@ -89,4 +92,23 @@ enum WaterShared {
     static func format(_ oz: Double, ml: Bool) -> String {
         ml ? "\(Int((oz * mlPerOz).rounded())) ml" : "\(Int(oz.rounded())) oz"
     }
+}
+
+/// The workout in progress, shown on the Lock Screen, Dynamic Island and the Workout widget.
+struct LiveWorkoutInfo: Codable, Hashable {
+    var dayTitle: String
+    var colorIndex: Int
+    var startedAt: Date
+    var exercise: String
+    var setText: String
+    var restEnd: Date?
+    var done: Int
+    var total: Int
+}
+
+struct WorkoutActivityAttributes: ActivityAttributes {
+    struct ContentState: Codable, Hashable {
+        var info: LiveWorkoutInfo
+    }
+    var dayTitle: String
 }

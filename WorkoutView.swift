@@ -16,10 +16,21 @@ struct WorkoutView: View {
     @AppStorage("restTotal") private var restTotal: Double = 90
     @AppStorage("restLabel") private var restLabel = ""
     @AppStorage("autoRest") private var autoRest = true
+    @AppStorage(TrainingSettings.autoProgressKey) private var autoProgress = true
+    @AppStorage(TrainingSettings.autoProgressSessionsKey) private var autoProgressSessions = 1
+    @AppStorage(TrainingSettings.travelKey) private var travelMode = false
+    @AppStorage(TrainingSettings.travelGearKey) private var travelGearRaw = TravelGear.dumbbells.rawValue
+    @AppStorage(TrainingSettings.shortOnTimeKey) private var shortOnTimeRaw = ""
+    @AppStorage(TrainingSettings.splitModeKey) private var splitModeRaw = SplitMode.shift.rawValue
+    @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,4,5,6"
+    @AppStorage(GymMusic.autoKey) private var musicAutoPlay = false
     @FocusState private var focusedField: String?
     @State private var confirmDiscard = false
     @State private var swapSlot: Exercise?
     @State private var prBanner: String?
+    @State private var tipsFor: Exercise?
+    @State private var showOptions = false
+    @State private var showCoach = false
 
     private var person: Person? {
         people.first { $0.id.uuidString == activePersonID } ?? people.first
@@ -45,18 +56,47 @@ struct WorkoutView: View {
 
                 Section { statusCard }
 
+                if let note = missedNote {
+                    Section {
+                        Label(note, systemImage: "calendar.badge.exclamationmark")
+                            .font(.subheadline)
+                    }
+                }
+
+                if travelMode || shortMinutes != nil {
+                    Section {
+                        if travelMode {
+                            Label("Travel mode: \((TravelGear(rawValue: travelGearRaw) ?? .dumbbells).label.lowercased()) versions of today's lifts",
+                                  systemImage: "airplane")
+                                .font(.subheadline)
+                        }
+                        if let m = shortMinutes {
+                            HStack {
+                                Label("Short on time: about \(m) min", systemImage: "hourglass")
+                                    .font(.subheadline)
+                                Spacer()
+                                Button("Full workout") { setShortOnTime(nil) }
+                                    .font(.caption.bold())
+                                    .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                }
+
                 Section(day.title) {
-                    ForEach(day.exercises) { slot in
+                    ForEach(slots) { slot in
                         let ex = effective(slot)
+                        let auto = autoTarget(for: ex)
                         ExerciseRow(
                             exercise: ex,
                             replacing: ex.id == slot.id ? nil : slot,
                             isDone: activeSession?.completedIDs.contains(slot.id) ?? false,
-                            current: latestEntry(for: ex)?.weight,
+                            current: auto?.weight ?? latestEntry(for: ex)?.weight,
                             lastTime: lastTimeText(for: ex),
                             todaySets: todaySets(for: ex),
                             bestBefore: bestBeforeToday(for: ex),
-                            suggestion: suggestion(for: ex),
+                            suggestion: auto == nil ? suggestion(for: ex) : nil,
+                            autoNote: auto?.note,
                             tint: day.color,
                             focus: $focusedField,
                             onToggle: { toggle(slot) },
@@ -64,15 +104,24 @@ struct WorkoutView: View {
                             onRest: { startRest(ex) },
                             onLogSet: { w, r in logSet(slot: slot, ex: ex, weight: w, reps: r) },
                             onDeleteSet: { deleteSet($0, ex: ex) },
-                            onSwap: { swapSlot = slot }
+                            onSwap: { swapSlot = slot },
+                            onTips: { tipsFor = ex }
                         )
+                    }
+                }
+
+                if shortMinutes != nil && slots.count < day.exercises.count {
+                    Section("Skipped today (short on time)") {
+                        ForEach(day.exercises.dropFirst(slots.count)) { slot in
+                            Text(effective(slot).name).foregroundStyle(.secondary)
+                        }
                     }
                 }
 
                 if let s = activeSession {
                     Section {
                         Button {
-                            s.completedIDs = day.exercises.map(\.id)
+                            s.completedIDs = slots.map(\.id)
                         } label: {
                             Label("Mark all exercises done", systemImage: "checkmark.circle")
                         }
@@ -81,6 +130,7 @@ struct WorkoutView: View {
                             s.endedAt = .now
                             stopRest()
                             WaterReminders.postWorkout()
+                            LiveWorkout.end()
                         } label: {
                             Label("Finish workout", systemImage: "flag.checkered")
                                 .bold()
@@ -95,6 +145,7 @@ struct WorkoutView: View {
                 }
             }
             .navigationTitle(person.map { "\($0.name)'s workout" } ?? "Workout")
+            .themedBackground()
             .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 6) {
@@ -119,6 +170,7 @@ struct WorkoutView: View {
                 Button("Discard", role: .destructive) {
                     if let s = activeSession { context.delete(s) }
                     stopRest()
+                    LiveWorkout.end()
                 }
             } message: {
                 Text("The timer and checkmarks are removed. Weights and sets you logged stay saved.")
@@ -129,7 +181,37 @@ struct WorkoutView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
+            .sheet(item: $tipsFor) { ex in
+                FormTipsSheet(exercise: ex)
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showOptions) {
+                WorkoutOptionsSheet()
+            }
+            .sheet(isPresented: $showCoach) {
+                CoachView()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        CalisthenicsView()
+                    } label: {
+                        Image(systemName: "figure.gymnastics")
+                    }
+                    .accessibilityLabel("Calisthenics")
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { showCoach = true } label: { Image(systemName: "bubble.left.and.text.bubble.right") }
+                        .accessibilityLabel("Ask the coach")
+                    Button { showOptions = true } label: { Image(systemName: "slider.horizontal.3") }
+                        .accessibilityLabel("Workout options")
+                }
+            }
             .task(id: restEnd) { await watchRest() }
+            .task(id: liveSignature) { syncLive() }
+            .onChange(of: shortOnTimeRaw) { _, _ in
+                if let s = activeSession { s.totalCount = slots.count }
+            }
             .task(id: prBanner) {
                 guard prBanner != nil else { return }
                 try? await Task.sleep(nanoseconds: 4_000_000_000)
@@ -178,28 +260,66 @@ struct WorkoutView: View {
                             .font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit())
                     }
                     Spacer()
-                    Text("\(s.completedIDs.count) of \(day.exercises.count)")
+                    if let bpm = LiveHeart.shared.current {
+                        Label("\(bpm)", systemImage: "heart.fill")
+                            .font(.headline.monospacedDigit())
+                            .foregroundStyle(.red)
+                    }
+                    Text("\(s.completedIDs.count) of \(slots.count)")
                         .font(.headline.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
-                ProgressView(value: Double(s.completedIDs.count), total: Double(max(1, day.exercises.count)))
+                ProgressView(value: Double(min(s.completedIDs.count, slots.count)), total: Double(max(1, slots.count)))
                     .tint(day.color)
+                quickButtons
             }
             .padding(.vertical, 4)
         } else {
-            Button {
-                if let p = person { _ = startSession(for: p) }
-            } label: {
-                Label("Start workout", systemImage: "play.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
+            VStack(spacing: 10) {
+                Button {
+                    if let p = person { _ = startSession(for: p) }
+                } label: {
+                    Label("Start workout", systemImage: "play.fill")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(day.color)
+                Text("About \(ShortOnTime.estimateMinutes(slots.map(effective))) min").font(.caption).foregroundStyle(.secondary)
+                quickButtons
             }
-            .buttonStyle(.borderedProminent)
-            .tint(day.color)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
         }
+    }
+
+    /// Music and "short on time" shortcuts under the timer.
+    private var quickButtons: some View {
+        HStack(spacing: 8) {
+            Button {
+                GymMusic.play()
+            } label: {
+                Label("Music", systemImage: "music.note").font(.caption.bold()).frame(maxWidth: .infinity)
+            }
+            Menu {
+                ForEach(ShortOnTime.choices, id: \.self) { m in
+                    Button("\(m) minutes") { setShortOnTime(m) }
+                }
+                if shortMinutes != nil { Button("Full workout") { setShortOnTime(nil) } }
+            } label: {
+                Label(shortMinutes.map { "\($0) min" } ?? "Short on time", systemImage: "hourglass")
+                    .font(.caption.bold()).frame(maxWidth: .infinity)
+            }
+            Button {
+                travelMode.toggle()
+            } label: {
+                Label(travelMode ? "Travel: on" : "Travel", systemImage: "airplane")
+                    .font(.caption.bold()).frame(maxWidth: .infinity)
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
     }
 
     private func prBar(_ text: String) -> some View {
@@ -262,6 +382,7 @@ struct WorkoutView: View {
         restTotal = Double(ex.rest)
         restLabel = ex.name
         restEnd = end.timeIntervalSince1970
+        syncLive()
         Task {
             if await Reminders.requestPermission() {
                 RestNotifier.schedule(at: end, exerciseName: ex.name)
@@ -272,12 +393,14 @@ struct WorkoutView: View {
     private func addRest(_ seconds: Double) {
         restEnd += seconds
         restTotal += seconds
+        syncLive()
         RestNotifier.schedule(at: Date(timeIntervalSince1970: restEnd), exerciseName: restLabel)
     }
 
     private func stopRest() {
         restEnd = 0
         RestNotifier.cancel()
+        syncLive()
     }
 
     /// Buzzes when the rest ends while the app is open, then tidies the bar away.
@@ -297,10 +420,58 @@ struct WorkoutView: View {
 
     // MARK: Swaps
 
-    /// The exercise actually being done in this slot (a swap if one is set for this workout).
-    private func effective(_ slot: Exercise) -> Exercise {
+    /// The exercise actually being done in this slot: a swap for this workout, the travel version, or the original.
+    private func baseExercise(_ slot: Exercise) -> Exercise {
         if let id = activeSession?.swaps[slot.id], let ex = Program.exercise(id) { return ex }
+        if travelMode, let alt = TravelCatalog.alternative(for: slot, gear: TravelGear(rawValue: travelGearRaw) ?? .dumbbells) {
+            return alt
+        }
         return slot
+    }
+
+    /// Same, with sets trimmed when short on time.
+    private func effective(_ slot: Exercise) -> Exercise {
+        var ex = baseExercise(slot)
+        if let sets = plan.sets[slot.id] { ex.sets = sets }
+        return ex
+    }
+
+    private var shortMinutes: Int? {
+        _ = shortOnTimeRaw
+        return ShortOnTime.todayMinutes
+    }
+
+    private func setShortOnTime(_ minutes: Int?) {
+        ShortOnTime.setToday(minutes)
+        shortOnTimeRaw = UserDefaults.standard.string(forKey: TrainingSettings.shortOnTimeKey) ?? ""
+    }
+
+    /// Today's slots (fewer when short on time) and any trimmed set counts.
+    private var plan: (slots: [Exercise], sets: [String: Int]) {
+        let all = day.exercises
+        guard let m = shortMinutes else { return (all, [:]) }
+        let planned = ShortOnTime.plan(all.map(baseExercise), minutes: m)
+        var sets: [String: Int] = [:]
+        for (i, p) in planned.enumerated() { sets[all[i].id] = p.sets }
+        return (Array(all.prefix(planned.count)), sets)
+    }
+
+    private var slots: [Exercise] { plan.slots }
+
+    /// A heads-up when gym days were missed since the last workout.
+    private var missedNote: String? {
+        guard let p = person, activeSession == nil else { return nil }
+        let finished = Planner.finishedSorted(sessions, personID: p.id)
+        if finished.contains(where: { Calendar.current.isDateInToday($0.startedAt) }) { return nil }
+        let days = Set(trainingDaysRaw.split(separator: ",").compactMap { Int($0) })
+        let missed = MissedDays.since(finished: finished, trainingDays: days)
+        guard !missed.isEmpty else { return nil }
+        let names = missed.suffix(3).map { $0.formatted(.dateTime.weekday(.abbreviated)) }.joined(separator: ", ")
+        let count = missed.count == 1 ? "a gym day" : "\(missed.count) gym days"
+        if SplitMode(rawValue: splitModeRaw) == .weekdays {
+            return "You missed \(count) (\(names)). Sticking to weekdays, so today is \(day.short)."
+        }
+        return "You missed \(count) (\(names)). Nothing's skipped: your split moved forward, so today is \(day.short)."
     }
 
     private func applySwap(slot: Exercise, to choice: Exercise, permanent: Bool) {
@@ -328,7 +499,7 @@ struct WorkoutView: View {
         }
         let s = activeSession ?? startSession(for: p)
         var sw = s.swaps
-        sw[slot.id] = choice.id == slot.id ? nil : choice.id
+        sw[slot.id] = choice.id == slot.id && !travelMode ? nil : choice.id
         s.swaps = sw
     }
 
@@ -420,8 +591,9 @@ struct WorkoutView: View {
     }
 
     private func startSession(for p: Person) -> Session {
-        let s = Session(personID: p.id, dayID: day.id, totalCount: day.exercises.count)
+        let s = Session(personID: p.id, dayID: day.id, totalCount: slots.count)
         context.insert(s)
+        if musicAutoPlay { GymMusic.play() }
         return s
     }
 
@@ -448,15 +620,23 @@ struct WorkoutView: View {
 
     /// Suggest going up when the last workout hit the top of the rep range on every set at one weight,
     /// or (without set logs) when the exercise was finished at the same weight two workouts in a row.
-    private func suggestion(for ex: Exercise) -> Double? {
+    private func suggestion(for ex: Exercise, sessionsNeeded: Int = 1) -> Double? {
         guard let p = person, let current = latestEntry(for: ex)?.weight, current > 0 || ex.isAssisted else { return nil }
         let cal = Calendar.current
 
         let older = setsFor(ex).filter { !cal.isDateInToday($0.date) }
-        if let lastDay = older.last.map({ cal.startOfDay(for: $0.date) }) {
-            let sets = older.filter { cal.isDate($0.date, inSameDayAs: lastDay) }
-            guard let top = ex.repTop, sets.count >= ex.sets, let w = sets.first?.weight,
-                  sets.allSatisfy({ $0.weight == w && $0.reps >= top }) else { return nil }
+        if !older.isEmpty {
+            let days = Set(older.map { cal.startOfDay(for: $0.date) }).sorted(by: >)
+            guard let top = ex.repTop, days.count >= sessionsNeeded else { return nil }
+            var weight: Double?
+            for d in days.prefix(sessionsNeeded) {
+                let sets = older.filter { cal.isDate($0.date, inSameDayAs: d) }
+                guard sets.count >= ex.sets, let sw = sets.first?.weight,
+                      sets.allSatisfy({ $0.weight == sw && $0.reps >= top }) else { return nil }
+                if let weight, weight != sw { return nil }
+                weight = sw
+            }
+            guard let w = weight else { return nil }
             if ex.isAssisted {
                 guard w > 0, w >= current else { return nil }
                 return max(0, w - ex.step)
@@ -479,6 +659,49 @@ struct WorkoutView: View {
         guard weight(onDay: doneDays[0]) == current, weight(onDay: doneDays[1]) == current else { return nil }
         if ex.isAssisted { return current > 0 ? max(0, current - ex.step) : nil }
         return current + ex.step
+    }
+
+    /// Auto-progression: the new weight to use today, if it's time to go up and nothing's logged yet today.
+    private func autoTarget(for ex: Exercise) -> (weight: Double, note: String)? {
+        guard autoProgress, ex.weighted || ex.isAssisted,
+              !history(for: ex).contains(where: { Calendar.current.isDateInToday($0.date) }),
+              let old = latestEntry(for: ex)?.weight,
+              let new = suggestion(for: ex, sessionsNeeded: max(1, autoProgressSessions)) else { return nil }
+        let times = autoProgressSessions <= 1 ? "last time" : "\(autoProgressSessions) times in a row"
+        let note = ex.isAssisted
+            ? "Auto: less help, \(formatWeight(old)) → \(formatWeight(new)) lb (you hit every rep \(times))"
+            : "Auto: up from \(formatWeight(old)) to \(formatWeight(new)) lb (you hit every rep \(times))"
+        return (new, note)
+    }
+
+    // MARK: Lock Screen and widget
+
+    /// Changes whenever something the Lock Screen timer or workout widget shows changes.
+    private var liveSignature: String {
+        guard let s = activeSession else { return "none" }
+        let setCount = allSets.filter { Calendar.current.isDateInToday($0.date) }.count
+        return "\(s.id)-\(s.completedIDs.count)-\(setCount)-\(restEnd)-\(slots.count)-\(travelMode)"
+    }
+
+    private func syncLive() {
+        guard let s = activeSession else { LiveWorkout.end(); return }
+        let currentSlot = slots.first { !s.completedIDs.contains($0.id) }
+        var exerciseName = "All exercises done"
+        var setText = "Tap Finish workout in the app"
+        if let slot = currentSlot {
+            let ex = effective(slot)
+            let done = todaySets(for: ex).count
+            let w = autoTarget(for: ex)?.weight ?? latestEntry(for: ex)?.weight
+            let reps = ex.isTimed ? ex.reps : (ex.repTop.map { "\($0)" } ?? ex.reps)
+            exerciseName = ex.name
+            setText = "Set \(min(done + 1, max(ex.sets, done + 1))) of \(ex.sets)"
+                + (w.map { " · \(formatWeight($0)) lb" } ?? "") + " × \(reps)"
+        }
+        let info = LiveWorkoutInfo(dayTitle: day.title, colorIndex: Program.index(of: day.id), startedAt: s.startedAt,
+                                   exercise: exerciseName, setText: setText,
+                                   restEnd: restEnd > Date.now.timeIntervalSince1970 ? Date(timeIntervalSince1970: restEnd) : nil,
+                                   done: min(s.completedIDs.count, slots.count), total: slots.count)
+        LiveWorkout.update(info)
     }
 
     private func setWeight(_ value: Double?, for ex: Exercise) {
@@ -507,6 +730,7 @@ struct ExerciseRow: View {
     let todaySets: [SetEntry]
     let bestBefore: Double?
     let suggestion: Double?
+    var autoNote: String? = nil
     let tint: Color
     var focus: FocusState<String?>.Binding
     let onToggle: () -> Void
@@ -515,6 +739,7 @@ struct ExerciseRow: View {
     let onLogSet: (Double, Int) -> Void
     let onDeleteSet: (SetEntry) -> Void
     let onSwap: () -> Void
+    var onTips: () -> Void = {}
 
     @State private var text = ""
     @State private var reps = 8
@@ -548,9 +773,15 @@ struct ExerciseRow: View {
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .accessibilityLabel("Start \(formatClock(exercise.rest)) rest timer")
-                    Button(action: onSwap) {
-                        Label("Swap", systemImage: "arrow.triangle.swap")
-                            .font(.caption)
+                    HStack(spacing: 6) {
+                        Button(action: onTips) {
+                            Image(systemName: "info.circle").font(.caption)
+                        }
+                        .accessibilityLabel("Form tips for \(exercise.name)")
+                        Button(action: onSwap) {
+                            Label("Swap", systemImage: "arrow.triangle.swap")
+                                .font(.caption)
+                        }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
@@ -622,6 +853,13 @@ struct ExerciseRow: View {
                     .padding(.leading, 44)
             } else if current == nil && todaySets.isEmpty {
                 Text("No weight logged yet").font(.caption).foregroundStyle(.secondary).padding(.leading, 44)
+            }
+
+            if let autoNote {
+                Label(autoNote, systemImage: exercise.isAssisted ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(.green)
+                    .padding(.leading, 44)
             }
 
             if let s = suggestion {

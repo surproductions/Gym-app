@@ -5,6 +5,7 @@ import WatchKit
 @main
 struct GymLogWatchApp: App {
     @StateObject private var model = WatchModel.shared
+    @StateObject private var heart = HeartTracker.shared
 
     var body: some Scene {
         WindowGroup {
@@ -12,6 +13,7 @@ struct GymLogWatchApp: App {
                 HomeView()
             }
             .environmentObject(model)
+            .environmentObject(heart)
         }
     }
 }
@@ -41,7 +43,12 @@ final class WatchModel: NSObject, ObservableObject, WCSessionDelegate {
     private func apply(_ data: Data) {
         guard let c = try? JSONDecoder().decode(WatchContext.self, from: data) else { return }
         UserDefaults.standard.set(data, forKey: cacheKey)
-        DispatchQueue.main.async { self.ctx = c }
+        DispatchQueue.main.async {
+            let wasGoing = self.ctx?.inProgress ?? false
+            self.ctx = c
+            // Workout finished on the iPhone: end heart-rate tracking too.
+            if wasGoing && !c.inProgress && HeartTracker.shared.running { HeartTracker.shared.stop() }
+        }
     }
 
     /// Sends right away when the iPhone is reachable, otherwise queues it.
@@ -69,6 +76,7 @@ final class WatchModel: NSObject, ObservableObject, WCSessionDelegate {
         }
         WKInterfaceDevice.current().play(.success)
         startRest(seconds: ex.rest, label: ex.name)
+        if !HeartTracker.shared.running { HeartTracker.shared.start() }
     }
 
     func addWater(_ oz: Double) {
@@ -121,6 +129,7 @@ struct HomeView: View {
                 if let end = model.restEnd {
                     RestRow(end: end, label: model.restLabel)
                 }
+                Section { HeartRow() }
                 Section {
                     WaterRowWatch(ctx: c)
                 }
@@ -150,6 +159,42 @@ struct HomeView: View {
         .navigationTitle("Gym Log")
         .navigationDestination(for: WatchExercise.self) { ex in
             ExerciseScreen(exerciseID: ex.id)
+        }
+    }
+}
+
+struct HeartRow: View {
+    @EnvironmentObject var heart: HeartTracker
+
+    var body: some View {
+        if heart.running {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Image(systemName: "heart.fill").foregroundStyle(.red)
+                    Text(heart.heartRate > 0 ? "\(Int(heart.heartRate))" : "--")
+                        .font(.title2.bold().monospacedDigit())
+                    Text("bpm").font(.caption2).foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(Int(heart.calories)) kcal").font(.caption2.monospacedDigit()).foregroundStyle(.orange)
+                }
+                if let start = heart.startDate {
+                    Text(start, style: .timer).font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                }
+                Button("End tracking", role: .destructive) { heart.stop() }
+                    .font(.caption2)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                Button {
+                    heart.start()
+                } label: {
+                    Label("Track heart rate", systemImage: "heart.fill")
+                }
+                .tint(.red)
+                if let s = heart.lastSummary {
+                    Text(s).font(.caption2).foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }

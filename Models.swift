@@ -33,6 +33,10 @@ final class Session {
     var totalCount: Int
     /// Program exercise id → the exercise done in its place this session.
     var swaps: [String: String] = [:]
+    /// From the Apple Watch, when heart rate was tracked.
+    var avgHeartRate: Double? = nil
+    var maxHeartRate: Double? = nil
+    var activeCalories: Double? = nil
 
     init(personID: UUID, dayID: String, totalCount: Int, startedAt: Date = .now) {
         self.id = UUID()

@@ -7,8 +7,8 @@ options:
     iOS: "17.0"
 settings:
   base:
-    MARKETING_VERSION: "1.4"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.5"
+    CURRENT_PROJECT_VERSION: "6"
     TARGETED_DEVICE_FAMILY: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -34,6 +34,8 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.surproductions.gymlog
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     scheme: {}
     settings:
       base:
@@ -47,6 +49,12 @@ targets:
         INFOPLIST_KEY_NSCameraUsageDescription: Gym Log uses the camera to photograph meals so Claude can estimate their calories and nutrition.
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Gym Log lets you pick a meal photo so Claude can estimate its calories and nutrition.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Light AppIcon-Mono AppIcon-Crimson AppIcon-Forest AppIcon-Midnight AppIcon-Neon AppIcon-Sunset AppIcon-Ocean AppIcon-Cockpit AppIcon-Gold AppIcon-Camo AppIcon-Vapor AppIcon-Acid AppIcon-Beast"
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Gym Log adds your upcoming gym days to your calendar and keeps them updated.
+        INFOPLIST_KEY_NSHealthShareUsageDescription: Gym Log reads heart rate and calories from your Apple Watch workouts.
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: Gym Log saves your Apple Watch strength workouts to Apple Health.
   GymLogWidget:
     type: app-extension
     platform: iOS
@@ -79,6 +87,16 @@ targets:
     deploymentTarget: "10.0"
     sources:
       - path: Watch
+    info:
+      path: WatchInfo.plist
+      properties:
+        WKBackgroundModes:
+          - workout-processing
+    entitlements:
+      path: GymLogWatch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     scheme: {}
     settings:
       base:
@@ -88,5 +106,7 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Gym Log
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.surproductions.gymlog
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: NO
+        INFOPLIST_KEY_NSHealthShareUsageDescription: Gym Log reads your heart rate and calories during workouts.
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: Gym Log saves your strength workouts to Apple Health.
         TARGETED_DEVICE_FAMILY: "4"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

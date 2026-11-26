@@ -81,8 +81,8 @@ struct CalendarView: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
             .navigationTitle("Calendar")
+            .themedBackground(fallback: Color(.systemGroupedBackground))
             .sheet(item: $selected) { key in
                 if let p = person {
                     DayDetailSheet(date: key.date, person: p)
@@ -251,6 +251,11 @@ struct DayDetailSheet: View {
                                     Text(d.title).font(.headline)
                                     Text("\(s.completedIDs.count) of \(s.totalCount) exercises · \(formatDuration(s.duration))")
                                         .font(.caption).foregroundStyle(.secondary)
+                                    if let hr = s.avgHeartRate {
+                                        Label("avg \(Int(hr)) bpm · max \(Int(s.maxHeartRate ?? hr)) · \(Int(s.activeCalories ?? 0)) kcal",
+                                              systemImage: "heart.fill")
+                                            .font(.caption).foregroundStyle(.red)
+                                    }
                                 }
                                 Spacer()
                                 Text(s.isComplete ? "All done" : "Partial")

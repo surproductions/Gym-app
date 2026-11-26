@@ -40,4 +40,13 @@ enum WatchKeys {
     static let weight = "weight"
     static let reps = "reps"
     static let ounces = "oz"
+    // heart rate from the Watch's workout
+    static let heartLive = "heartLive"
+    static let heartSummary = "heartSummary"
+    static let bpm = "bpm"
+    static let avgHR = "avgHR"
+    static let maxHR = "maxHR"
+    static let kcal = "kcal"
+    static let start = "start"
+    static let end = "end"
 }

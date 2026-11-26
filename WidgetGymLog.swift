@@ -169,5 +169,7 @@ struct GymLogWidgetBundle: WidgetBundle {
     var body: some Widget {
         GymLogWidget()
         WaterWidget()
+        WorkoutWidget()
+        WorkoutLiveActivity()
     }
 }

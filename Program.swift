@@ -233,7 +233,8 @@ enum Program {
     /// Every exercise the app knows, including swaps no longer in the program.
     static var allExercises: [Exercise] {
         var seen = Set<String>()
-        return (ProgramStore.shared.days.flatMap(\.exercises) + ProgramStore.shared.extras).filter { seen.insert($0.id).inserted }
+        return (ProgramStore.shared.days.flatMap(\.exercises) + ProgramStore.shared.extras + TravelCatalog.all)
+            .filter { seen.insert($0.id).inserted }
     }
 
     static func day(_ id: String) -> WorkoutDay {

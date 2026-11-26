@@ -33,6 +33,11 @@ struct FoodView: View {
         return bodyWeights.last { $0.personID == p.id }?.weight
     }
 
+    private var isGaining: Bool {
+        guard let goal = person?.goalWeight else { return false }
+        return goal > (latestBodyWeight ?? goal) + 1
+    }
+
     var calorieTarget: Double { person?.calorieTarget ?? FoodTargets.suggestedCalories(bodyWeight: latestBodyWeight, goal: person?.goalWeight) }
     var proteinTarget: Double { person?.proteinTarget ?? FoodTargets.suggestedProtein(goal: person?.goalWeight, bodyWeight: latestBodyWeight) }
 
@@ -53,6 +58,14 @@ struct FoodView: View {
                 }
 
                 Section { todayCard }
+
+                if let p = person, isGaining {
+                    let kcalLeft = calorieTarget - today.reduce(0) { $0 + $1.calories }
+                    let proteinLeft = proteinTarget - today.reduce(0) { $0 + $1.protein }
+                    if kcalLeft > 150 {
+                        BulkHelperSection(person: p, kcalLeft: kcalLeft, proteinLeft: proteinLeft)
+                    }
+                }
 
                 Section {
                     Button {
@@ -95,6 +108,7 @@ struct FoodView: View {
                 }
             }
             .navigationTitle("Food & Water")
+            .themedBackground()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }

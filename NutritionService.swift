@@ -116,12 +116,23 @@ enum NutritionService {
     /// Sends the photo (optional) and description to Claude, then refines each item with USDA data when possible.
     /// One Messages API call with the saved key; returns the text of Claude's reply.
     static func askClaude(content: [[String: Any]], maxTokens: Int, noteIfCut: Bool = false) async throws -> String {
+        try await send(messages: [["role": "user", "content": content]], system: nil, maxTokens: maxTokens, noteIfCut: noteIfCut)
+    }
+
+    /// A back-and-forth conversation (roles "user" / "assistant", oldest first).
+    static func chat(system: String, turns: [(role: String, text: String)], maxTokens: Int) async throws -> String {
+        let messages: [[String: Any]] = turns.map { ["role": $0.role, "content": $0.text] }
+        return try await send(messages: messages, system: system, maxTokens: maxTokens, noteIfCut: true)
+    }
+
+    private static func send(messages: [[String: Any]], system: String?, maxTokens: Int, noteIfCut: Bool) async throws -> String {
         guard let key = Keychain.get(Keychain.claudeAccount), !key.isEmpty else { throw NutritionError.noKey }
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": NutritionSettings.model,
             "max_tokens": maxTokens,
-            "messages": [["role": "user", "content": content]],
+            "messages": messages,
         ]
+        if let system { body["system"] = system }
         var req = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
         req.httpMethod = "POST"
         req.timeoutInterval = 90
@@ -141,7 +152,7 @@ enum NutritionService {
               let blocks = json["content"] as? [[String: Any]] else { throw NutritionError.unreadable }
         let text = blocks.compactMap { $0["text"] as? String }.joined()
         if noteIfCut, json["stop_reason"] as? String == "max_tokens" {
-            return text + "\n\n_(Claude ran out of room here — tap New check-in to try again.)_"
+            return text + "\n\n_(Claude ran out of room here. Try again.)_"
         }
         return text
     }
