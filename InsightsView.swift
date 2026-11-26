@@ -121,9 +121,8 @@ struct CheckInSection: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(latest.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
                         .font(.caption).foregroundStyle(.secondary)
-                    MarkdownText(text: latest.text)
-                        .lineLimit(expanded ? nil : 8)
-                    Button(expanded ? "Show less" : "Read full check-in") { expanded.toggle() }
+                    MarkdownText(text: latest.text, maxLines: 5)
+                    Button("Read full check-in") { expanded = true }
                         .font(.caption.bold())
                         .buttonStyle(.borderless)
                 }
@@ -166,6 +165,22 @@ struct CheckInSection: View {
             Text("AI weekly check-in")
         } footer: {
             Text("Uses the Claude API key from the Food tab's settings. Each check-in costs about a cent.")
+        }
+        .sheet(isPresented: $expanded) {
+            if let latest = reports.first {
+                NavigationStack {
+                    ScrollView {
+                        MarkdownText(text: latest.text)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                    }
+                    .navigationTitle(latest.date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { expanded = false } }
+                    }
+                }
+            }
         }
         .onAppear { reports = CheckInStore.load(person.id) }
         .onChange(of: person.id) { _, id in reports = CheckInStore.load(id) }
@@ -263,10 +278,17 @@ struct CheckInSection: View {
 /// Renders Claude's simple markdown: ## headings, - bullets, **bold** inline.
 struct MarkdownText: View {
     let text: String
+    var maxLines: Int? = nil
+
+    /// Non-empty lines, cut to maxLines for a preview.
+    private var lines: [String] {
+        let all = text.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        return maxLines.map { Array(all.prefix($0)) } ?? all
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ForEach(Array(text.components(separatedBy: "\n").enumerated()), id: \.offset) { _, raw in
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, raw in
                 let line = raw.trimmingCharacters(in: .whitespaces)
                 if line.hasPrefix("#") {
                     Text(inline(line.drop { $0 == "#" || $0 == " " }))
