@@ -120,6 +120,9 @@ struct ExerciseEditorView: View {
             Section("Exercise") {
                 TextField("Name", text: $exercise.name)
                 Toggle("Uses weight", isOn: $exercise.weighted)
+                Toggle("Assisted (less weight = progress)", isOn: Binding(
+                    get: { exercise.isAssisted },
+                    set: { exercise.assisted = $0 }))
             }
             Section {
                 Stepper("Sets: \(exercise.sets)", value: $exercise.sets, in: 1...10)
@@ -134,9 +137,24 @@ struct ExerciseEditorView: View {
             } footer: {
                 Text("Write a range like 6–8 for \"go up\" suggestions. Add \" s\" for timed holds, like 30–60 s.")
             }
+            Section {
+                ForEach(Muscle.allCases) { m in
+                    Toggle(m.rawValue, isOn: Binding(
+                        get: { exercise.muscleGroups.contains(m) },
+                        set: { on in
+                            var list = exercise.muscleGroups
+                            if on { if !list.contains(m) { list.append(m) } } else { list.removeAll { $0 == m } }
+                            exercise.muscles = list.map(\.rawValue)
+                        }))
+                }
+            } header: {
+                Text("Muscles worked")
+            } footer: {
+                Text("Used for weekly sets per muscle on the Progress tab.")
+            }
             Section("Rest and progression") {
                 Stepper("Rest: \(formatClock(exercise.rest))", value: $exercise.rest, in: 15...600, step: 15)
-                Picker("Go up by", selection: $exercise.step) {
+                Picker(exercise.isAssisted ? "Drop assistance by" : "Go up by", selection: $exercise.step) {
                     Text("2.5 lb").tag(2.5)
                     Text("5 lb").tag(5.0)
                     Text("10 lb").tag(10.0)

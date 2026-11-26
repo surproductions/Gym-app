@@ -51,6 +51,16 @@ enum NutritionError: LocalizedError {
     }
 }
 
+enum BarcodeError: LocalizedError {
+    case notFound, noNutrition
+    var errorDescription: String? {
+        switch self {
+        case .notFound: return "That barcode isn't in the Open Food Facts database. Try a photo estimate instead."
+        case .noNutrition: return "Found the product, but it has no nutrition info. Try a photo estimate instead."
+        }
+    }
+}
+
 // MARK: - Settings (API key in the Keychain, the rest in UserDefaults)
 
 enum NutritionSettings {
@@ -104,25 +114,17 @@ enum Keychain {
 
 enum NutritionService {
     /// Sends the photo (optional) and description to Claude, then refines each item with USDA data when possible.
-    static func estimate(image: UIImage?, description: String) async throws -> MealEstimate {
+    /// One Messages API call with the saved key; returns the text of Claude's reply.
+    static func askClaude(content: [[String: Any]], maxTokens: Int) async throws -> String {
         guard let key = Keychain.get(Keychain.claudeAccount), !key.isEmpty else { throw NutritionError.noKey }
-
-        var content: [[String: Any]] = []
-        if let image, let jpeg = resized(image, maxSide: 1024).jpegData(compressionQuality: 0.7) {
-            content.append(["type": "image",
-                            "source": ["type": "base64", "media_type": "image/jpeg",
-                                       "data": jpeg.base64EncodedString()]])
-        }
-        content.append(["type": "text", "text": prompt(description)])
-
         let body: [String: Any] = [
             "model": NutritionSettings.model,
-            "max_tokens": 1500,
+            "max_tokens": maxTokens,
             "messages": [["role": "user", "content": content]],
         ]
         var req = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
         req.httpMethod = "POST"
-        req.timeoutInterval = 60
+        req.timeoutInterval = 90
         req.setValue(key, forHTTPHeaderField: "x-api-key")
         req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         req.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -137,7 +139,20 @@ enum NutritionService {
         }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let blocks = json["content"] as? [[String: Any]] else { throw NutritionError.unreadable }
-        let text = blocks.compactMap { $0["text"] as? String }.joined()
+        return blocks.compactMap { $0["text"] as? String }.joined()
+    }
+
+    static func estimate(image: UIImage?, description: String) async throws -> MealEstimate {
+
+        var content: [[String: Any]] = []
+        if let image, let jpeg = resized(image, maxSide: 1024).jpegData(compressionQuality: 0.7) {
+            content.append(["type": "image",
+                            "source": ["type": "base64", "media_type": "image/jpeg",
+                                       "data": jpeg.base64EncodedString()]])
+        }
+        content.append(["type": "text", "text": prompt(description)])
+
+        let text = try await askClaude(content: content, maxTokens: 1500)
         var estimate = try parse(text)
 
         if NutritionSettings.useUSDA {
@@ -219,6 +234,44 @@ enum NutritionService {
         out.fatPerGram = (per100("204") ?? item.fatPerGram * 100) / 100
         out.source = "USDA"
         return out
+    }
+
+    /// Looks up a packaged food by barcode in Open Food Facts (free, no key). Uses the label's serving size.
+    static func lookupBarcode(_ code: String) async throws -> FoodItem {
+        let digits = code.filter(\.isNumber)
+        guard !digits.isEmpty,
+              let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(digits).json?fields=product_name,brands,nutriments,serving_quantity,serving_size")
+        else { throw BarcodeError.notFound }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 20
+        req.setValue("GymLog/1.4 (iOS app)", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await URLSession.shared.data(for: req)
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              (json["status"] as? NSNumber)?.intValue == 1,
+              let product = json["product"] as? [String: Any],
+              let n = product["nutriments"] as? [String: Any] else { throw BarcodeError.notFound }
+
+        func num(_ key: String) -> Double? {
+            if let v = n[key] as? NSNumber { return v.doubleValue }
+            if let v = n[key] as? String { return Double(v) }
+            return nil
+        }
+        var kcal100 = num("energy-kcal_100g")
+        if kcal100 == nil, let kj = num("energy_100g") { kcal100 = kj / 4.184 }
+        guard let kcal = kcal100 else { throw BarcodeError.noNutrition }
+
+        let rawName = (product["product_name"] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+        let brand = (product["brands"] as? String)?.split(separator: ",").first.map(String.init) ?? ""
+        let name = [brand, rawName].filter { !$0.isEmpty }.joined(separator: " ")
+        let serving = (product["serving_quantity"] as? NSNumber)?.doubleValue
+            ?? Double(product["serving_quantity"] as? String ?? "") ?? 100
+        return FoodItem(name: name.isEmpty ? "Scanned item" : name, grams: max(1, serving),
+                        kcalPerGram: kcal / 100,
+                        proteinPerGram: (num("proteins_100g") ?? 0) / 100,
+                        carbsPerGram: (num("carbohydrates_100g") ?? 0) / 100,
+                        fatPerGram: (num("fat_100g") ?? 0) / 100,
+                        source: "Label")
     }
 
     static func resized(_ image: UIImage, maxSide: CGFloat) -> UIImage {

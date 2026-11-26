@@ -8,7 +8,7 @@ struct SettingsView: View {
     @Query private var sessions: [Session]
     @Query private var entries: [WeightEntry]
     @AppStorage("activePersonID") private var activePersonID = ""
-    @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,5,6"
+    @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,4,5,6"
     @State private var newName = ""
     @State private var todayWeight = ""
     @State private var personToDelete: Person?
@@ -68,6 +68,7 @@ struct SettingsView: View {
 
                 BackupSection()
             }
+            .scrollDismissesKeyboard(.immediately)
             .navigationTitle("People")
             .confirmationDialog(
                 "Delete \(personToDelete?.name ?? "")?",
@@ -121,6 +122,8 @@ struct BodyWeightSection: View {
     @Environment(\.modelContext) private var context
     @State private var input = ""
     @State private var goalInput = ""
+    @FocusState private var focused: Field?
+    private enum Field { case goal, today }
 
     var body: some View {
         Section {
@@ -141,22 +144,30 @@ struct BodyWeightSection: View {
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 80)
-                    .onSubmit(saveGoal)
+                    .focused($focused, equals: .goal)
                     .onChange(of: goalInput) { _, _ in saveGoal() }
+                if focused == .goal {
+                    Button("Done") { focused = nil; hideKeyboard() }
+                        .buttonStyle(.borderedProminent)
+                }
             }
             if let goal = person.goalWeight, let last = entries.last {
-                let toGo = goal - last.weight
-                Text(toGo > 0 ? "\(formatWeight(toGo)) lb to go" : "Goal reached")
-                    .foregroundStyle(toGo > 0 ? Color.secondary : Color.green)
+                let diff = goal - last.weight
+                Text(abs(diff) < 0.5 ? "Goal reached 🎉"
+                     : diff > 0 ? "\(formatWeight(diff)) lb to gain" : "\(formatWeight(-diff)) lb to lose")
+                    .foregroundStyle(abs(diff) < 0.5 ? Color.green : Color.secondary)
             }
             HStack {
                 TextField("Today's weight (lb)", text: $input)
                     .keyboardType(.decimalPad)
-                Button("Log") { log() }
+                    .focused($focused, equals: .today)
+                Button("Log") { log(); focused = nil; hideKeyboard() }
                     .disabled(Double(input) == nil)
             }
         } header: {
             Text("\(person.name)'s body weight")
+        } footer: {
+            Text("Set the goal above your weight to gain, or below it to lose. Progress and food targets follow it.")
         }
         .onAppear { goalInput = formatWeight(person.goalWeight) }
         .onChange(of: person.id) { _, _ in goalInput = formatWeight(person.goalWeight) }

@@ -14,6 +14,9 @@ struct LiftsView: View {
     @Query(sort: \WeightEntry.date) private var entries: [WeightEntry]
     @Query(sort: \SetEntry.date) private var sets: [SetEntry]
     @Query(sort: \BodyWeight.date) private var bodyWeights: [BodyWeight]
+    @Query private var sessions: [Session]
+    @Query(sort: \FoodEntry.date) private var foods: [FoodEntry]
+    @Query(sort: \WaterEntry.date) private var water: [WaterEntry]
     @AppStorage("activePersonID") private var activePersonID = ""
 
     private var person: Person? {
@@ -46,6 +49,14 @@ struct LiftsView: View {
                 }
                 if let p = person {
                     BodyWeightProgress(person: p, entries: bodyWeights.filter { $0.personID == p.id })
+                    CheckInSection(person: p, sets: sets.filter { $0.personID == p.id },
+                                   sessions: sessions.filter { $0.personID == p.id },
+                                   weights: entries.filter { $0.personID == p.id },
+                                   bodyWeights: bodyWeights.filter { $0.personID == p.id },
+                                   foods: foods.filter { $0.personID == p.id },
+                                   water: water.filter { $0.personID == p.id })
+                    VolumeSection(sets: sets.filter { $0.personID == p.id },
+                                  sessions: sessions.filter { $0.personID == p.id })
                     PRSection(sets: sets.filter { $0.personID == p.id })
                 }
                 ForEach(Program.days) { day in
@@ -112,8 +123,10 @@ struct BodyWeightProgress: View {
     }
 
     private var projectedDate: Date? {
-        guard let goal = person.goalWeight, let t = trend, t.slope > 0.005,
-              let lastDate = points.last?.date, goal > t.intercept else { return nil }
+        guard let goal = person.goalWeight, let t = trend, let lastDate = points.last?.date else { return nil }
+        // Works for gaining (goal above, trending up) and losing (goal below, trending down).
+        let gaining = goal > t.intercept
+        guard (gaining && t.slope > 0.005) || (!gaining && t.slope < -0.005) else { return nil }
         let days = (goal - t.intercept) / t.slope
         guard days < 3 * 365 else { return nil }
         return lastDate.addingTimeInterval(days * 86_400)
@@ -137,7 +150,9 @@ struct BodyWeightProgress: View {
             if !points.isEmpty, projectedDate == nil, person.goalWeight != nil {
                 Text(trend == nil
                      ? "Log your weight a few times over at least 3 days to get a projected goal date."
-                     : "You're not trending up yet, so there's no projected date. Eat a bit more each day to start gaining.")
+                     : (person.goalWeight ?? 0) >= (points.last?.weight ?? 0)
+                        ? "You're not trending up yet, so there's no projected date. Eat a bit more each day to start gaining."
+                        : "You're not trending down yet, so there's no projected date. Eat a bit less each day to start losing.")
             }
         }
     }
@@ -154,7 +169,8 @@ struct BodyWeightProgress: View {
                     Text("PER WEEK").font(.caption).foregroundStyle(.secondary)
                     Text("\(t.slope >= 0 ? "+" : "−")\(String(format: "%.1f", abs(t.slope * 7))) lb")
                         .font(.title3.bold().monospacedDigit())
-                        .foregroundStyle(t.slope > 0 ? Color.green : Color.secondary)
+                        .foregroundStyle(((person.goalWeight ?? 0) >= (points.last?.weight ?? 0)) == (t.slope > 0)
+                                         ? Color.green : Color.secondary)
                 }
                 Spacer()
             }
@@ -230,7 +246,7 @@ struct PRSection: View {
     }
 
     private func score(_ s: SetEntry, _ ex: Exercise) -> Double {
-        (ex.isTimed || s.weight <= 0) ? s.weight * 1000 + Double(s.reps) : estimatedMax(weight: s.weight, reps: s.reps)
+        setScore(weight: s.weight, reps: s.reps, exercise: ex)
     }
 
     var body: some View {
@@ -250,7 +266,9 @@ struct PRSection: View {
                                  ? "\(r.best.reps) s"
                                  : "\(formatWeight(r.best.weight)) × \(r.best.reps)")
                                 .font(.subheadline.bold().monospacedDigit())
-                            if !r.exercise.isTimed && r.best.weight > 0 && r.best.reps > 1 {
+                            if r.exercise.isAssisted {
+                                Text("assisted").font(.caption).foregroundStyle(.secondary)
+                            } else if !r.exercise.isTimed && r.best.weight > 0 && r.best.reps > 1 {
                                 Text("≈ \(formatWeight(estimatedMax(weight: r.best.weight, reps: r.best.reps).rounded())) lb max")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
@@ -282,9 +300,9 @@ struct LiftRow: View {
                             .foregroundStyle(.secondary)
                         if let first = points.first, last.weight != first.weight {
                             let diff = last.weight - first.weight
-                            Text("\(diff > 0 ? "▲ +" : "▼ ")\(formatWeight(abs(diff)))")
+                            Text("\(diff > 0 ? "▲ +" : "▼ −")\(formatWeight(abs(diff)))")
                                 .font(.caption.bold().monospacedDigit())
-                                .foregroundStyle(diff > 0 ? Color.green : Color.red)
+                                .foregroundStyle(isImprovement(diff, for: exercise) ? Color.green : Color.red)
                         }
                     }
                 } else {
@@ -354,7 +372,7 @@ struct LiftDetailView: View {
                                 let d = p.weight - older.weight
                                 Text("\(d > 0 ? "+" : "−")\(formatWeight(abs(d)))")
                                     .font(.caption.bold())
-                                    .foregroundStyle(d > 0 ? Color.green : Color.red)
+                                    .foregroundStyle(isImprovement(d, for: exercise) ? Color.green : Color.red)
                             }
                             Text("\(formatWeight(p.weight)) lb")
                                 .monospacedDigit()
@@ -373,14 +391,14 @@ struct LiftDetailView: View {
     private var statsGrid: some View {
         let start = points.first?.weight ?? 0
         let now = points.last?.weight ?? 0
-        let best = points.map(\.weight).max() ?? 0
+        let best = (exercise.isAssisted ? points.map(\.weight).min() : points.map(\.weight).max()) ?? 0
         let change = now - start
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             stat("Started", "\(formatWeight(start)) lb")
             stat("Now", "\(formatWeight(now)) lb")
             stat("Best", "\(formatWeight(best)) lb")
             stat("Change", change == 0 ? "0 lb" : "\(change > 0 ? "+" : "−")\(formatWeight(abs(change))) lb",
-                 tint: change > 0 ? .green : (change < 0 ? .red : .primary))
+                 tint: change == 0 ? .primary : (isImprovement(change, for: exercise) ? .green : .red))
         }
         .padding(.vertical, 4)
     }

@@ -22,8 +22,10 @@ struct DayKey: Identifiable {
 struct CalendarView: View {
     @Query(sort: \Person.createdAt) private var people: [Person]
     @Query(sort: \Session.startedAt) private var sessions: [Session]
+    @Query(sort: \WaterEntry.date) private var water: [WaterEntry]
+    @Query(sort: \BodyWeight.date) private var bodyWeights: [BodyWeight]
     @AppStorage("activePersonID") private var activePersonID = ""
-    @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,5,6" // Calendar weekdays: 1 = Sun … 7 = Sat
+    @AppStorage("trainingDays") private var trainingDaysRaw = "2,3,4,5,6" // Calendar weekdays: 1 = Sun … 7 = Sat
     @State private var month = Calendar.current.startOfMonth(for: .now)
     @State private var selected: DayKey?
 
@@ -118,8 +120,16 @@ struct CalendarView: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
     }
 
+    private func waterHit(_ date: Date) -> Bool {
+        guard let p = person else { return false }
+        let bw = bodyWeights.last { $0.personID == p.id }?.weight
+        let mine = water.filter { $0.personID == p.id }
+        return Goals.ounces(on: date, mine) >= Goals.waterGoal(person: p, bodyWeight: bw, on: date)
+    }
+
     private func dayCell(_ date: Date) -> some View {
         let st = status(for: date)
+        let drank = !(date > cal.startOfDay(for: .now)) && waterHit(date)
         let isToday = cal.isDateInToday(date)
         let isFuture = date > cal.startOfDay(for: .now)
         return Button {
@@ -133,6 +143,12 @@ struct CalendarView: View {
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(isToday ? Color.primary : Color.clear, lineWidth: 2)
                 )
+                .overlay(alignment: .topTrailing) {
+                    if drank {
+                        Circle().fill(Color.cyan).frame(width: 7, height: 7).padding(4)
+                            .accessibilityLabel("Water goal hit")
+                    }
+                }
                 .foregroundStyle(isFuture ? Color.secondary : Color.primary)
         }
         .buttonStyle(.plain)
@@ -144,6 +160,10 @@ struct CalendarView: View {
             legendItem(.green, "All done")
             legendItem(.yellow, "Partial")
             legendItem(.red.opacity(0.4), "Missed")
+            HStack(spacing: 6) {
+                Circle().fill(Color.cyan).frame(width: 8, height: 8)
+                Text("Water goal")
+            }
         }
         .font(.caption)
     }

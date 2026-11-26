@@ -14,3 +14,18 @@ cat > Assets.xcassets/AppIcon.appiconset/Contents.json <<'JSON'
   "info" : { "author" : "xcode", "version" : 1 }
 }
 JSON
+
+# Apple Watch app icon
+mkdir -p Watch/Assets.xcassets/AppIcon.appiconset
+cp AppIcon.png Watch/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+cat > Watch/Assets.xcassets/Contents.json <<'JSON'
+{ "info" : { "author" : "xcode", "version" : 1 } }
+JSON
+cat > Watch/Assets.xcassets/AppIcon.appiconset/Contents.json <<'JSON'
+{
+  "images" : [
+    { "filename" : "AppIcon.png", "idiom" : "universal", "platform" : "watchos", "size" : "1024x1024" }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}
+JSON

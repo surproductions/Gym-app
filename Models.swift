@@ -10,6 +10,8 @@ final class Person {
     /// Daily food targets; nil means "use the suggested target".
     var calorieTarget: Double? = nil
     var proteinTarget: Double? = nil
+    /// Daily water goal in ounces; nil = suggested from body weight.
+    var waterGoal: Double? = nil
 
     init(name: String, goalWeight: Double? = nil) {
         self.id = UUID()
@@ -124,6 +126,22 @@ final class FoodEntry {
         self.fat = fat
         self.itemsJSON = itemsJSON
         self.photo = photo
+        self.date = date
+    }
+}
+
+/// Water drunk, always stored in fluid ounces.
+@Model
+final class WaterEntry {
+    var id: UUID
+    var personID: UUID
+    var date: Date
+    var ounces: Double
+
+    init(personID: UUID, ounces: Double, date: Date = .now) {
+        self.id = UUID()
+        self.personID = personID
+        self.ounces = ounces
         self.date = date
     }
 }

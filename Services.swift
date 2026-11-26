@@ -22,7 +22,8 @@ enum Planner {
 // MARK: - Widget data
 
 enum SnapshotWriter {
-    static func update(people: [Person], sessions: [Session], activePersonID: String, trainingDays: Set<Int>) {
+    static func update(people: [Person], sessions: [Session], activePersonID: String, trainingDays: Set<Int>,
+                       waterOz: Double = 0, waterGoalOz: Double = 0) {
         guard let person = people.first(where: { $0.id.uuidString == activePersonID }) ?? people.first else { return }
         let cal = Calendar.current
         let finished = Planner.finishedSorted(sessions, personID: person.id)
@@ -54,7 +55,8 @@ enum SnapshotWriter {
             nextColor: Program.index(of: next.id), nextCount: next.exercises.count,
             weekDone: weekDays.count,
             weekTarget: max(1, trainingDays.count),
-            weekStart: week?.start ?? cal.startOfDay(for: .now)
+            weekStart: week?.start ?? cal.startOfDay(for: .now),
+            waterOz: waterOz, waterGoalOz: waterGoalOz, waterDay: .now, waterInML: WaterSettings.inML
         )
         snap.save()
         WidgetCenter.shared.reloadAllTimelines()
@@ -65,7 +67,7 @@ enum SnapshotWriter {
 
 enum Reminders {
     static let messages = [
-        "Every rep today gets you closer to 160.",
+        "Every rep today gets you closer to your goal.",
         "You don't have to feel like it. You just have to show up.",
         "45 minutes. That's all it takes. Let's go.",
         "Strong is built one session at a time.",

@@ -133,11 +133,7 @@ struct GymWidgetView: View {
                     .foregroundStyle(.white.opacity(0.7))
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if let next = d.nextShort {
-                    Text("Next: \(next)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.85))
-                }
+                WaterRow(water: WidgetWater(entry.snap))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -172,5 +168,6 @@ struct GymLogWidget: Widget {
 struct GymLogWidgetBundle: WidgetBundle {
     var body: some Widget {
         GymLogWidget()
+        WaterWidget()
     }
 }

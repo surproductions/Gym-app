@@ -9,7 +9,9 @@ struct BackupFile: Codable {
     struct PersonRec: Codable {
         var id: UUID; var name: String; var goalWeight: Double?; var createdAt: Date
         var calorieTarget: Double? = nil; var proteinTarget: Double? = nil
+        var waterGoal: Double? = nil
     }
+    struct WaterRec: Codable { var id: UUID; var personID: UUID; var date: Date; var ounces: Double }
     struct SessionRec: Codable {
         var id: UUID; var personID: UUID; var dayID: String
         var startedAt: Date; var endedAt: Date?; var completedIDs: [String]; var totalCount: Int
@@ -42,6 +44,7 @@ struct BackupFile: Codable {
     var foods: [FoodRec]? = nil
     var program: [WorkoutDay]? = nil
     var extras: [Exercise]? = nil
+    var water: [WaterRec]? = nil
 
     var summary: String {
         let workouts = sessions.filter { $0.endedAt != nil }.count
@@ -90,7 +93,7 @@ enum Backup {
             version: 2,
             people: people.map {
                 .init(id: $0.id, name: $0.name, goalWeight: $0.goalWeight, createdAt: $0.createdAt,
-                      calorieTarget: $0.calorieTarget, proteinTarget: $0.proteinTarget)
+                      calorieTarget: $0.calorieTarget, proteinTarget: $0.proteinTarget, waterGoal: $0.waterGoal)
             },
             sessions: sessions.map {
                 .init(id: $0.id, personID: $0.personID, dayID: $0.dayID, startedAt: $0.startedAt,
@@ -100,7 +103,7 @@ enum Backup {
             weights: weights.map { .init(personID: $0.personID, exerciseID: $0.exerciseID, weight: $0.weight, date: $0.date) },
             bodyWeights: bodies.map { .init(personID: $0.personID, weight: $0.weight, date: $0.date) },
             settings: .init(
-                trainingDays: d.string(forKey: "trainingDays") ?? "2,3,5,6",
+                trainingDays: d.string(forKey: "trainingDays") ?? "2,3,4,5,6",
                 remindersOn: d.bool(forKey: "remindersOn"),
                 reminderMinutes: d.object(forKey: "reminderMinutes") as? Int ?? 17 * 60,
                 activePersonID: d.string(forKey: "activePersonID") ?? ""
@@ -115,7 +118,10 @@ enum Backup {
                       protein: $0.protein, carbs: $0.carbs, fat: $0.fat, itemsJSON: $0.itemsJSON)
             },
             program: ProgramStore.shared.days,
-            extras: ProgramStore.shared.extras
+            extras: ProgramStore.shared.extras,
+            water: try context.fetch(FetchDescriptor<WaterEntry>()).map {
+                .init(id: $0.id, personID: $0.personID, date: $0.date, ounces: $0.ounces)
+            }
         )
     }
 
@@ -252,6 +258,7 @@ enum Backup {
             person.createdAt = p.createdAt
             person.calorieTarget = p.calorieTarget
             person.proteinTarget = p.proteinTarget
+            person.waterGoal = p.waterGoal
             context.insert(person)
         }
 
@@ -298,6 +305,12 @@ enum Backup {
             e.id = r.id
             context.insert(e)
             addedFoods += 1
+        }
+        let waterIDs = Set(try context.fetch(FetchDescriptor<WaterEntry>()).map(\.id))
+        for r in file.water ?? [] where !waterIDs.contains(r.id) {
+            let e = WaterEntry(personID: r.personID, ounces: r.ounces, date: r.date)
+            e.id = r.id
+            context.insert(e)
         }
         let store = ProgramStore.shared
         if let program = file.program, !program.isEmpty { store.days = program }

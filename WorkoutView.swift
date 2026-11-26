@@ -80,6 +80,7 @@ struct WorkoutView: View {
                             focusedField = nil
                             s.endedAt = .now
                             stopRest()
+                            WaterReminders.postWorkout()
                         } label: {
                             Label("Finish workout", systemImage: "flag.checkered")
                                 .bold()
@@ -94,16 +95,24 @@ struct WorkoutView: View {
                 }
             }
             .navigationTitle(person.map { "\($0.name)'s workout" } ?? "Workout")
+            .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 6) {
+                    if focusedField != nil {
+                        HStack {
+                            Spacer()
+                            Button {
+                                focusedField = nil
+                                hideKeyboard()
+                            } label: {
+                                Label("Done", systemImage: "keyboard.chevron.compact.down").font(.subheadline.bold())
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .padding(.horizontal)
+                        }
+                    }
                     if let pr = prBanner { prBar(pr) }
                     if restEnd > 0 { restBar }
-                }
-            }
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") { focusedField = nil }
                 }
             }
             .confirmationDialog("Discard this workout?", isPresented: $confirmDiscard, titleVisibility: .visible) {
@@ -335,8 +344,7 @@ struct WorkoutView: View {
     }
 
     private func score(_ s: SetEntry, _ ex: Exercise) -> Double {
-        if ex.isTimed || s.weight <= 0 { return s.weight * 1000 + Double(s.reps) }
-        return estimatedMax(weight: s.weight, reps: s.reps)
+        setScore(weight: s.weight, reps: s.reps, exercise: ex)
     }
 
     private func bestBeforeToday(for ex: Exercise) -> Double? {
@@ -367,7 +375,8 @@ struct WorkoutView: View {
         context.insert(entry)
 
         // Keep the working weight (used by charts, the widget and suggestions) at today's top weight.
-        setWeight(max(weight, today.map(\.weight).max() ?? 0), for: ex)
+        setWeight(ex.isAssisted ? min(weight, today.map(\.weight).min() ?? weight)
+                                : max(weight, today.map(\.weight).max() ?? 0), for: ex)
 
         let newScore = score(entry, ex)
         if let best, newScore > best, newScore > bestToday {
@@ -390,7 +399,9 @@ struct WorkoutView: View {
     private func deleteSet(_ set: SetEntry, ex: Exercise) {
         context.delete(set)
         let remaining = todaySets(for: ex).filter { $0.id != set.id }
-        if let top = remaining.map(\.weight).max() { setWeight(top, for: ex) }
+        if let top = ex.isAssisted ? remaining.map(\.weight).min() : remaining.map(\.weight).max() {
+            setWeight(top, for: ex)
+        }
     }
 
     // MARK: Actions
@@ -438,15 +449,19 @@ struct WorkoutView: View {
     /// Suggest going up when the last workout hit the top of the rep range on every set at one weight,
     /// or (without set logs) when the exercise was finished at the same weight two workouts in a row.
     private func suggestion(for ex: Exercise) -> Double? {
-        guard let p = person, let current = latestEntry(for: ex)?.weight, current > 0 else { return nil }
+        guard let p = person, let current = latestEntry(for: ex)?.weight, current > 0 || ex.isAssisted else { return nil }
         let cal = Calendar.current
 
         let older = setsFor(ex).filter { !cal.isDateInToday($0.date) }
         if let lastDay = older.last.map({ cal.startOfDay(for: $0.date) }) {
             let sets = older.filter { cal.isDate($0.date, inSameDayAs: lastDay) }
-            guard let top = ex.repTop, sets.count >= ex.sets,
-                  let w = sets.first?.weight, sets.allSatisfy({ $0.weight >= w && $0.reps >= top }),
-                  w >= current else { return nil }
+            guard let top = ex.repTop, sets.count >= ex.sets, let w = sets.first?.weight,
+                  sets.allSatisfy({ $0.weight == w && $0.reps >= top }) else { return nil }
+            if ex.isAssisted {
+                guard w > 0, w >= current else { return nil }
+                return max(0, w - ex.step)
+            }
+            guard w >= current else { return nil }
             return w + ex.step
         }
 
@@ -462,6 +477,7 @@ struct WorkoutView: View {
             return hist.last { $0.date < endOfDay }?.weight
         }
         guard weight(onDay: doneDays[0]) == current, weight(onDay: doneDays[1]) == current else { return nil }
+        if ex.isAssisted { return current > 0 ? max(0, current - ex.step) : nil }
         return current + ex.step
     }
 
@@ -553,7 +569,7 @@ struct ExerciseRow: View {
                     .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 8))
                     .focused(focus, equals: exercise.id)
                 stepButton(systemImage: "plus", delta: 5)
-                Text(exercise.weighted ? "lb" : "lb +").font(.caption).foregroundStyle(.secondary)
+                Text(exercise.isAssisted ? "lb assist" : exercise.weighted ? "lb" : "lb +").font(.caption).foregroundStyle(.secondary)
             }
             .padding(.leading, 44)
 
@@ -614,7 +630,9 @@ struct ExerciseRow: View {
                     onSetWeight(s)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Ready to go up: try \(formatWeight(s)) lb", systemImage: "arrow.up.circle.fill")
+                        Label(exercise.isAssisted ? "Ready for less help: try \(formatWeight(s)) lb"
+                              : "Ready to go up: try \(formatWeight(s)) lb",
+                              systemImage: exercise.isAssisted ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
                             .font(.subheadline.bold())
                         Text("You hit your target reps last time. Tap to use it.")
                             .font(.caption)
@@ -648,9 +666,7 @@ struct ExerciseRow: View {
 
     private func isTodaysPR(_ s: SetEntry) -> Bool {
         guard let best = bestBefore else { return false }
-        func score(_ x: SetEntry) -> Double {
-            (exercise.isTimed || x.weight <= 0) ? x.weight * 1000 + Double(x.reps) : estimatedMax(weight: x.weight, reps: x.reps)
-        }
+        func score(_ x: SetEntry) -> Double { setScore(weight: x.weight, reps: x.reps, exercise: exercise) }
         let top = todaySets.max { score($0) < score($1) }
         return top?.id == s.id && score(s) > best
     }

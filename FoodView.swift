@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 import UIKit
+import VisionKit
 
 /// Food tab: today's calories and protein against your targets, with meals logged by photo.
 struct FoodView: View {
@@ -9,9 +10,12 @@ struct FoodView: View {
     @Query(sort: \Person.createdAt) private var people: [Person]
     @Query(sort: \FoodEntry.date, order: .reverse) private var foods: [FoodEntry]
     @Query(sort: \BodyWeight.date) private var bodyWeights: [BodyWeight]
+    @Query(sort: \WaterEntry.date) private var allWater: [WaterEntry]
+    @Query private var sessions: [Session]
     @AppStorage("activePersonID") private var activePersonID = ""
     @State private var showLog = false
     @State private var showSettings = false
+    @State private var showScanner = false
 
     private var person: Person? {
         people.first { $0.id.uuidString == activePersonID } ?? people.first
@@ -29,7 +33,7 @@ struct FoodView: View {
         return bodyWeights.last { $0.personID == p.id }?.weight
     }
 
-    var calorieTarget: Double { person?.calorieTarget ?? FoodTargets.suggestedCalories(bodyWeight: latestBodyWeight) }
+    var calorieTarget: Double { person?.calorieTarget ?? FoodTargets.suggestedCalories(bodyWeight: latestBodyWeight, goal: person?.goalWeight) }
     var proteinTarget: Double { person?.proteinTarget ?? FoodTargets.suggestedProtein(goal: person?.goalWeight, bodyWeight: latestBodyWeight) }
 
     var body: some View {
@@ -37,6 +41,15 @@ struct FoodView: View {
             List {
                 if people.count > 1 {
                     Section { PersonPicker() }
+                }
+
+                if let p = person {
+                    Section("Today's goals") {
+                        GoalsCard(person: p, water: allWater.filter { $0.personID == p.id }, foods: mine,
+                                  sessions: sessions.filter { $0.personID == p.id }, bodyWeight: latestBodyWeight,
+                                  calorieTarget: calorieTarget, proteinTarget: proteinTarget)
+                    }
+                    Section { WaterCard(person: p, water: allWater.filter { $0.personID == p.id }, bodyWeight: latestBodyWeight) }
                 }
 
                 Section { todayCard }
@@ -81,7 +94,7 @@ struct FoodView: View {
                     }
                 }
             }
-            .navigationTitle("Food")
+            .navigationTitle("Food & Water")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
@@ -93,7 +106,8 @@ struct FoodView: View {
             }
             .sheet(isPresented: $showSettings) {
                 if let p = person {
-                    FoodSettingsSheet(person: p, suggestedCalories: FoodTargets.suggestedCalories(bodyWeight: latestBodyWeight),
+                    FoodSettingsSheet(person: p, suggestedWaterOz: Goals.waterGoal(person: nil, bodyWeight: latestBodyWeight),
+                                      suggestedCalories: FoodTargets.suggestedCalories(bodyWeight: latestBodyWeight, goal: p.goalWeight),
                                       suggestedProtein: FoodTargets.suggestedProtein(goal: p.goalWeight, bodyWeight: latestBodyWeight))
                 }
             }
@@ -154,12 +168,15 @@ struct FoodView: View {
 
 enum FoodTargets {
     /// Rough surplus for slow lean gain: about 17 kcal per lb of body weight (≈ 2,300 at 137 lb), at least 2,500.
-    static func suggestedCalories(bodyWeight: Double?) -> Double {
+    /// Gaining: about 17 kcal per lb (at least 2,500). Losing: about 12 kcal per lb (at least 1,600). Maintaining: 15.
+    static func suggestedCalories(bodyWeight: Double?, goal: Double?) -> Double {
         let bw = bodyWeight ?? 140
-        return max(2500, (bw * 17 / 50).rounded() * 50)
+        let perLb: Double
+        if let goal, goal < bw - 1 { perLb = 12 } else if let goal, goal > bw + 1 { perLb = 17 } else { perLb = 15 }
+        let raw = (bw * perLb / 50).rounded() * 50
+        return perLb == 17 ? max(2500, raw) : max(1600, raw)
     }
 
-    /// About 0.8 g per lb of goal weight.
     static func suggestedProtein(goal: Double?, bodyWeight: Double?) -> Double {
         ((goal ?? bodyWeight ?? 150) * 0.8 / 5).rounded() * 5
     }
@@ -200,6 +217,8 @@ struct MealLogSheet: View {
     @State private var image: UIImage?
     @State private var pickerItem: PhotosPickerItem?
     @State private var showCamera = false
+    @State private var showBarcode = false
+    @State private var lookingUp = false
     @State private var details = ""
     @State private var estimating = false
     @State private var error: String?
@@ -239,8 +258,20 @@ struct MealLogSheet: View {
                         }
                         .buttonStyle(.bordered)
                     }
+                    if BarcodeScanner.isAvailable {
+                        Button {
+                            showBarcode = true
+                        } label: {
+                            HStack {
+                                if lookingUp { ProgressView().padding(.trailing, 4) }
+                                Label(lookingUp ? "Looking it up…" : "Scan a barcode", systemImage: "barcode.viewfinder")
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(lookingUp)
+                    }
                 } footer: {
-                    Text("A photo is optional, but it helps Claude judge portion sizes.")
+                    Text("Scan packaged food for exact label numbers, or use a photo so Claude can judge portion sizes.")
                 }
 
                 Section("What's in it?") {
@@ -284,6 +315,7 @@ struct MealLogSheet: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Log a meal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -292,8 +324,14 @@ struct MealLogSheet: View {
                     Button("Save", action: save).bold().disabled(!canSave)
                 }
             }
+            .fullScreenCover(isPresented: $showBarcode) {
+                BarcodeScanner(isPresented: $showBarcode) { code in
+                    Task { await lookUp(code) }
+                }
+                .ignoresSafeArea()
+            }
             .fullScreenCover(isPresented: $showCamera) {
-                CameraPicker(image: $image).ignoresSafeArea()
+                CameraPicker(image: $image, isPresented: $showCamera).ignoresSafeArea()
             }
             .onChange(of: pickerItem) { _, item in
                 Task {
@@ -360,6 +398,21 @@ struct MealLogSheet: View {
 
     private func fmt(_ v: Double) -> String { v >= 10 ? "\(Int(v.rounded()))" : String(format: "%.1f", v) }
 
+    private func lookUp(_ code: String) async {
+        lookingUp = true
+        error = nil
+        defer { lookingUp = false }
+        do {
+            let item = try await NutritionService.lookupBarcode(code)
+            manual = false
+            items.append(item)
+            if mealName.isEmpty { mealName = item.name }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     private var canSave: Bool {
         manual ? Double(mKcal) != nil : !items.isEmpty
     }
@@ -402,7 +455,7 @@ struct MealLogSheet: View {
 /// Wraps the system camera.
 struct CameraPicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
-    @Environment(\.dismiss) private var dismiss
+    @Binding var isPresented: Bool
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
@@ -422,10 +475,10 @@ struct CameraPicker: UIViewControllerRepresentable {
         func imagePickerController(_ picker: UIImagePickerController,
                                    didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             parent.image = info[.originalImage] as? UIImage
-            parent.dismiss()
+            parent.isPresented = false
         }
 
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.isPresented = false }
     }
 }
 
@@ -433,6 +486,7 @@ struct CameraPicker: UIViewControllerRepresentable {
 
 struct FoodSettingsSheet: View {
     @Bindable var person: Person
+    let suggestedWaterOz: Double
     let suggestedCalories: Double
     let suggestedProtein: Double
 
@@ -448,6 +502,8 @@ struct FoodSettingsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                WaterSettingsSection(person: person, suggestedOz: suggestedWaterOz)
+
                 Section {
                     if hasKey {
                         Label("API key saved on this phone", systemImage: "checkmark.seal.fill").foregroundStyle(.green)
@@ -494,9 +550,10 @@ struct FoodSettingsSheet: View {
                 } header: {
                     Text("\(person.name)'s daily targets")
                 } footer: {
-                    Text("Leave blank to use the suggested target for gaining weight (\(Int(suggestedCalories)) kcal and \(Int(suggestedProtein)) g protein, based on your body weight and goal). If the scale isn't moving after 2 weeks, add about 250 kcal.")
+                    Text("Leave blank to use the suggested target for your goal (\(Int(suggestedCalories)) kcal and \(Int(suggestedProtein)) g protein, based on your body weight and goal). If the scale isn’t moving the right way after 2 weeks, adjust by about 250 kcal.")
                 }
             }
+            .scrollDismissesKeyboard(.immediately)
             .navigationTitle("Food settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -521,6 +578,54 @@ struct FoodSettingsSheet: View {
             Text(label)
             Spacer()
             TextField(placeholder, text: value).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 100)
+        }
+    }
+}
+
+
+/// Live barcode scanner (VisionKit). Calls back once with the first code it reads.
+struct BarcodeScanner: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let onCode: (String) -> Void
+
+    @MainActor static var isAvailable: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
+
+    func makeUIViewController(context: Context) -> UINavigationController {
+        let scanner = DataScannerViewController(
+            recognizedDataTypes: [.barcode(symbologies: [.ean13, .ean8, .upce, .code128])],
+            qualityLevel: .balanced, isHighlightingEnabled: true)
+        scanner.delegate = context.coordinator
+        scanner.navigationItem.title = "Scan a barcode"
+        scanner.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            systemItem: .cancel, primaryAction: UIAction { _ in context.coordinator.close() })
+        let nav = UINavigationController(rootViewController: scanner)
+        try? scanner.startScanning()
+        return nav
+    }
+
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, DataScannerViewControllerDelegate {
+        let parent: BarcodeScanner
+        private var done = false
+        init(_ parent: BarcodeScanner) { self.parent = parent }
+
+        func close() { parent.isPresented = false }
+
+        func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem],
+                         allItems: [RecognizedItem]) {
+            guard !done else { return }
+            for item in addedItems {
+                if case .barcode(let code) = item, let value = code.payloadStringValue {
+                    done = true
+                    dataScanner.stopScanning()
+                    parent.onCode(value)
+                    parent.isPresented = false
+                    return
+                }
+            }
         }
     }
 }
