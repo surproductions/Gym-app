@@ -6,4 +6,5 @@ Payload/
 *.entitlements
 WidgetInfo.plist
 WatchInfo.plist
+AppInfo.plist
 .DS_Store

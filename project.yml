@@ -7,8 +7,8 @@ options:
     iOS: "17.0"
 settings:
   base:
-    MARKETING_VERSION: "1.5"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "1.6"
+    CURRENT_PROJECT_VERSION: "7"
     TARGETED_DEVICE_FAMILY: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -29,6 +29,15 @@ targets:
       - Assets.xcassets
     dependencies:
       - target: GymLogWidget
+    info:
+      path: AppInfo.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.surproductions.gymlog.friends
     entitlements:
       path: GymLog.entitlements
       properties:
@@ -88,6 +97,8 @@ targets:
     info:
       path: WatchInfo.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKBackgroundModes:
           - workout-processing
     entitlements:

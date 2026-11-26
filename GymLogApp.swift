@@ -102,7 +102,10 @@ struct ContentView: View {
                 syncWater()
                 Task { await FriendsSync.checkInbox(people: people) }
             }
-            if phase == .background { AutoBackup.run(context: context) }
+            if phase == .background {
+                AutoBackup.run(context: context)
+                FriendsBackground.schedule()
+            }
         }
         // Auto-backup a couple of seconds after anything changes (rapid edits are combined).
         .task(id: dataSignature) {

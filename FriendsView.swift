@@ -1,4 +1,5 @@
 import Charts
+import UIKit
 import SwiftUI
 
 /// The Friends part of the People tab.
@@ -152,9 +153,14 @@ struct FriendRowView: View {
                     Text("\(st.weekDone)/\(st.weekPlanned) this week" + (st.weeks > 0 ? " · 🔥 \(st.weeks)-week streak" : ""))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                if let today = s?.food?.last, Calendar.current.isDateInToday(today.date) {
-                    Text("Today: \(Int(today.kcal)) kcal · \(Int(today.protein)) g protein")
-                        .font(.caption).foregroundStyle(.secondary)
+                if let t = FriendToday(s), t.hasAnything {
+                    HStack(spacing: 10) {
+                        if let oz = t.waterOz, let g = t.waterGoal { chip("drop.fill", oz / max(g, 1), .cyan) }
+                        if let k = t.kcal, let g = t.kcalTarget { chip("flame.fill", k / max(g, 1), .orange) }
+                        if let p = t.protein, let g = t.proteinTarget { chip("fork.knife", p / max(g, 1), .pink) }
+                        if let w = t.workedOut { Image(systemName: w ? "checkmark.circle.fill" : "dumbbell")
+                            .font(.caption).foregroundStyle(w ? Color.green : Color.secondary) }
+                    }
                 }
                 if let at = friend.snapshot_at {
                     Text("Updated \(at.formatted(.relative(presentation: .named)))")
@@ -164,6 +170,90 @@ struct FriendRowView: View {
                 }
             }
         }
+    }
+}
+
+private func chip(_ icon: String, _ fraction: Double, _ color: Color) -> some View {
+    HStack(spacing: 2) {
+        Image(systemName: fraction >= 1 ? "checkmark.circle.fill" : icon)
+        Text("\(Int(min(fraction, 9.99) * 100))%").monospacedDigit()
+    }
+    .font(.caption2.bold())
+    .foregroundStyle(fraction >= 1 ? Color.green : color)
+}
+
+/// A friend's progress today, worked out from what they share.
+struct FriendToday {
+    var waterOz: Double?
+    var waterGoal: Double?
+    var kcal: Double?
+    var kcalTarget: Double?
+    var protein: Double?
+    var proteinTarget: Double?
+    var workedOut: Bool?
+
+    var hasAnything: Bool { waterOz != nil || kcal != nil || workedOut != nil }
+
+    init?(_ s: FriendSnapshot?) {
+        guard let s else { return nil }
+        let cal = Calendar.current
+        if let water = s.water {
+            waterOz = water.last(where: { cal.isDateInToday($0.date) })?.oz ?? 0
+            waterGoal = s.waterGoal
+        }
+        if let food = s.food {
+            let today = food.last(where: { cal.isDateInToday($0.date) })
+            kcal = today?.kcal ?? 0
+            protein = today?.protein ?? 0
+            kcalTarget = s.targets?.kcal
+            proteinTarget = s.targets?.protein
+        }
+        if let w = s.workouts {
+            workedOut = w.contains { cal.isDateInToday($0.date) }
+        }
+    }
+}
+
+struct GoalRow: View {
+    let icon: String
+    let label: String
+    let value: Double
+    let goal: Double
+    let unit: String
+    let color: Color
+    let sent: Bool
+    let onNudge: () -> Void
+
+    private var done: Bool { value >= goal * 0.98 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label(label, systemImage: done ? "checkmark.circle.fill" : icon)
+                    .foregroundStyle(done ? Color.green : color)
+                    .font(.subheadline.bold())
+                Spacer()
+                Text("\(Int(value)) / \(Int(goal)) \(unit)").font(.subheadline.monospacedDigit())
+                if !done { NudgeButton(sent: sent, action: onNudge) }
+            }
+            ProgressView(value: min(value, goal), total: max(goal, 1)).tint(done ? .green : color)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+struct NudgeButton: View {
+    let sent: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(sent ? "Sent" : "Nudge", systemImage: sent ? "checkmark" : "bell.fill")
+                .font(.caption.bold())
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(sent)
     }
 }
 
@@ -263,6 +353,7 @@ struct FriendDetailView: View {
     let friend: FriendRow
     let store: FriendsStore
     @State private var sent: String?
+    @State private var nudged: Set<String> = []
     @State private var liftIndex = 0
     @State private var confirmRemove = false
     @Environment(\.dismiss) private var dismiss
@@ -277,6 +368,48 @@ struct FriendDetailView: View {
         let f = current
         let s = f.snapshot
         List {
+            if let t = FriendToday(s), t.hasAnything {
+                Section {
+                    if let oz = t.waterOz, let goal = t.waterGoal {
+                        GoalRow(icon: "drop.fill", label: "Water", value: oz, goal: goal, unit: "oz", color: .cyan,
+                                sent: nudged.contains("water")) {
+                            nudge("water", "💧", "Drink some water! You're at \(Int(oz)) of \(Int(goal)) oz today.")
+                        }
+                    }
+                    if let kcal = t.kcal, let target = t.kcalTarget {
+                        GoalRow(icon: "flame.fill", label: "Calories", value: kcal, goal: target, unit: "kcal", color: .orange,
+                                sent: nudged.contains("kcal")) {
+                            nudge("kcal", "🍽️", "Time to eat! You're at \(Int(kcal)) of \(Int(target)) kcal today.")
+                        }
+                    }
+                    if let p = t.protein, let target = t.proteinTarget {
+                        GoalRow(icon: "fork.knife", label: "Protein", value: p, goal: target, unit: "g", color: .pink,
+                                sent: nudged.contains("protein")) {
+                            nudge("protein", "🍗", "Get your protein in! \(Int(p)) of \(Int(target)) g so far today.")
+                        }
+                    }
+                    if let done = t.workedOut {
+                        HStack {
+                            Label(done ? "Worked out today" : "No workout yet today",
+                                  systemImage: done ? "checkmark.circle.fill" : "dumbbell")
+                                .foregroundStyle(done ? Color.green : Color.primary)
+                            Spacer()
+                            if !done {
+                                NudgeButton(sent: nudged.contains("gym")) {
+                                    nudge("gym", "🏋️", "Gym today? Let's get it 💪")
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Today")
+                } footer: {
+                    if let at = f.snapshot_at {
+                        Text("As of \(at.formatted(date: .omitted, time: .shortened)). Nudges show up as a notification on their phone.")
+                    }
+                }
+            }
+
             Section {
                 HStack(spacing: 8) {
                     ForEach(cheers.indices, id: \.self) { i in
@@ -445,6 +578,15 @@ struct FriendDetailView: View {
             }
         } message: {
             Text("You'll stop seeing each other's stats. You can add each other again with your codes.")
+        }
+    }
+
+    private func nudge(_ key: String, _ emoji: String, _ message: String) {
+        Task {
+            if await store.cheer(current, emoji: emoji, message: message) {
+                nudged.insert(key)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         }
     }
 

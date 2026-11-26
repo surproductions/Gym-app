@@ -1,3 +1,4 @@
+import BackgroundTasks
 import CryptoKit
 import Foundation
 import Observation
@@ -397,5 +398,47 @@ enum FriendsSync {
         guard let d = UserDefaults.standard.data(forKey: cheersKey(p)),
               let v = try? JSONDecoder().decode([Cheer].self, from: d) else { return [] }
         return v
+    }
+}
+
+// MARK: - Background refresh: keep your stats fresh for friends and pick up nudges
+
+
+enum FriendsBackground {
+    static let taskID = "com.surproductions.gymlog.friends"
+
+    /// Call once while the app is launching.
+    static func register() {
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: taskID, using: nil) { task in
+            schedule()
+            let work = Task { @MainActor in
+                await runOnce()
+                task.setTaskCompleted(success: true)
+            }
+            task.expirationHandler = { work.cancel() }
+        }
+    }
+
+    /// Asks iOS to wake the app in about 30 minutes (iOS decides the exact time).
+    static func schedule() {
+        let request = BGAppRefreshTaskRequest(identifier: taskID)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 30 * 60)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    @MainActor
+    static func runOnce() async {
+        let ctx = AppModel.container.mainContext
+        let people = (try? ctx.fetch(FetchDescriptor<Person>())) ?? []
+        guard people.contains(where: { FriendsIdentity.cachedMe($0.id) != nil }) else { return }
+        await FriendsSync.checkInbox(people: people)
+        await FriendsSync.push(
+            people: people,
+            sessions: (try? ctx.fetch(FetchDescriptor<Session>())) ?? [],
+            sets: (try? ctx.fetch(FetchDescriptor<SetEntry>())) ?? [],
+            weights: (try? ctx.fetch(FetchDescriptor<WeightEntry>())) ?? [],
+            bodies: (try? ctx.fetch(FetchDescriptor<BodyWeight>())) ?? [],
+            foods: (try? ctx.fetch(FetchDescriptor<FoodEntry>())) ?? [],
+            water: (try? ctx.fetch(FetchDescriptor<WaterEntry>())) ?? [])
     }
 }
