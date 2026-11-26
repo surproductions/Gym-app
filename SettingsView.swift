@@ -43,6 +43,8 @@ struct SettingsView: View {
                 }
 
                 if let p = person {
+                    FriendsSection(person: p).id(p.id)
+
                     BodyWeightSection(person: p, entries: bodyWeights.filter { $0.personID == p.id })
                 }
 

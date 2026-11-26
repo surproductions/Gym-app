@@ -49,6 +49,7 @@ struct ContentView: View {
     @AppStorage(CalendarSync.minutesKey) private var calendarMinutes = 17 * 60
     @AppStorage(CalendarSync.lengthKey) private var calendarLength = 60
     @AppStorage(CalendarSync.nonceKey) private var calendarNonce = 0
+    @AppStorage(FriendsSync.pushNonceKey) private var friendsNonce = 0
     @AppStorage(TrainingSettings.splitModeKey) private var splitMode = SplitMode.shift.rawValue
     @AppStorage(ThemeSettings.key) private var themeID = Theme.classic.id
 
@@ -96,7 +97,11 @@ struct ContentView: View {
         .onChange(of: splitMode) { _, _ in sync() }
         .onChange(of: waterSignature) { _, _ in syncWater() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { ingestWidgetWater(); syncWater() }
+            if phase == .active {
+                ingestWidgetWater()
+                syncWater()
+                Task { await FriendsSync.checkInbox(people: people) }
+            }
             if phase == .background { AutoBackup.run(context: context) }
         }
         // Auto-backup a couple of seconds after anything changes (rapid edits are combined).
@@ -105,7 +110,15 @@ struct ContentView: View {
             guard !Task.isCancelled else { return }
             AutoBackup.run(context: context)
             PhoneBridge.shared.pushContext()
+            await pushFriends()
         }
+        .task(id: friendsNonce) { await pushFriends() }
+    }
+
+    /// Uploads what friends can see (only for people who turned on sharing).
+    private func pushFriends() async {
+        await FriendsSync.push(people: people, sessions: sessions, sets: loggedSets, weights: entries,
+                               bodies: bodies, foods: foods, water: water)
     }
 
     /// Changes whenever a workout starts, finishes, or gets ticked.
