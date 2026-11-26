@@ -115,7 +115,7 @@ enum Keychain {
 enum NutritionService {
     /// Sends the photo (optional) and description to Claude, then refines each item with USDA data when possible.
     /// One Messages API call with the saved key; returns the text of Claude's reply.
-    static func askClaude(content: [[String: Any]], maxTokens: Int) async throws -> String {
+    static func askClaude(content: [[String: Any]], maxTokens: Int, noteIfCut: Bool = false) async throws -> String {
         guard let key = Keychain.get(Keychain.claudeAccount), !key.isEmpty else { throw NutritionError.noKey }
         let body: [String: Any] = [
             "model": NutritionSettings.model,
@@ -139,7 +139,11 @@ enum NutritionService {
         }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let blocks = json["content"] as? [[String: Any]] else { throw NutritionError.unreadable }
-        return blocks.compactMap { $0["text"] as? String }.joined()
+        let text = blocks.compactMap { $0["text"] as? String }.joined()
+        if noteIfCut, json["stop_reason"] as? String == "max_tokens" {
+            return text + "\n\n_(Claude ran out of room here — tap New check-in to try again.)_"
+        }
+        return text
     }
 
     static func estimate(image: UIImage?, description: String) async throws -> MealEstimate {

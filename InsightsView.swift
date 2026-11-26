@@ -191,7 +191,7 @@ struct CheckInSection: View {
         error = nil
         defer { loading = false }
         do {
-            let text = try await NutritionService.askClaude(content: [["type": "text", "text": prompt()]], maxTokens: 900)
+            let text = try await NutritionService.askClaude(content: [["type": "text", "text": prompt()]], maxTokens: 4000, noteIfCut: true)
             let c = CheckIn(date: .now, text: text.trimmingCharacters(in: .whitespacesAndNewlines))
             CheckInStore.add(c, for: person.id)
             reports = CheckInStore.load(person.id)
