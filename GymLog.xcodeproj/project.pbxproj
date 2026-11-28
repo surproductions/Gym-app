@@ -1,0 +1,688 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		02D3E1E27F7959E51E4F5925 /* BackupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCDE19405EE5540CD7454177 /* BackupView.swift */; };
+		0A7882EE66BF9FA432E22031 /* Program.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9EF5A1A7151DAC58C04CA0 /* Program.swift */; };
+		0C7204C35B08568A81AB188B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D3564BA93B433F535B5C4EA /* SettingsView.swift */; };
+		15FFE5077CDCBBF0D8C2AEA3 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA62A2E7F49EC397F6F24219 /* WatchApp.swift */; };
+		17BF265355FEFB9516240711 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B1DFD6F2A23887A8CCA3F8 /* Models.swift */; };
+		1A0FD8C175A34BCEA9C3B95E /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 748C9E01E39B5B4283934369 /* WorkoutView.swift */; };
+		1B0B26D0FF4A52D0BE993034 /* GymLogApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B871489FC8D02A22D861404A /* GymLogApp.swift */; };
+		1BA371ECD1823C2440A34EB3 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989081A9AA272D1ABA0B1553 /* CalendarView.swift */; };
+		30C8EA48AC3810C53F0C36D1 /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFC2964B17F47B5082242091 /* FriendsView.swift */; };
+		343E55997187CC6294343024 /* WidgetWaterIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1CCD26A241785A49A6EE9A2 /* WidgetWaterIntent.swift */; };
+		416BD9CA64CA8064A8D7520F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = "TEMP_F5364B20-C42F-4CFF-9F0E-DD555B7B59FA" /* Assets.xcassets */; };
+		41FFE0AAFA895928CE32C728 /* Services.swift in Sources */ = {isa = PBXBuildFile; fileRef = D17D4BECF572608E7DCC7AF5 /* Services.swift */; };
+		422492E508F218EFD8CD7197 /* ProgramEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B201FBB6BF31386669E15A21 /* ProgramEditorView.swift */; };
+		43F49787138F53BE2E8DFF08 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4DD401DA69BA2EB3F58526 /* Training.swift */; };
+		4A7A2C012F6BE763FBE4AA25 /* CoachView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44807DA1C4F7DEBF0D6FB897 /* CoachView.swift */; };
+		4D415FD1AC1E72D59AA6E5EA /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0F5717C5CB563AFEC7136BF /* InsightsView.swift */; };
+		728BDF5A5737E7D451D96460 /* CalendarSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBD7B80AEABA1F895057BBB0 /* CalendarSync.swift */; };
+		7FE4BA0558B0696C7E479331 /* WatchHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4719AC2029CEDEAB7EDCBC /* WatchHealth.swift */; };
+		8755D561157A3BAC0779DEB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DE0C34B22CD5D17F7A958001 /* Assets.xcassets */; };
+		8B5FF864FD5E169FD9E4CEFA /* WaterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCA764FA32F98D44AA6F7998 /* WaterView.swift */; };
+		8D55D17FB71D9B1D901CABC6 /* BulkHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23067C49AA77D4107070A07C /* BulkHelper.swift */; };
+		932FBCDBBE71C9C48B320E4F /* LiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBA7A7871C83063760338C8D /* LiftsView.swift */; };
+		93FEC75FE32F05FB74761DA6 /* FormTips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A3A94819D4A8F0D64344872 /* FormTips.swift */; };
+		9955623D6F3EAF90E64454AC /* PhoneBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339D86B915AF37011639C498 /* PhoneBridge.swift */; };
+		A3F5A029D7B366D7A6EDC390 /* WidgetLiveWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD1EC19BBD56064EC8780B5 /* WidgetLiveWorkout.swift */; };
+		AB290EC996488FC50C5197E0 /* WatchShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B895CB95DB95D2863D525D /* WatchShared.swift */; };
+		AD59D173B912133A2498C0BF /* CalisthenicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45639B71344B6AA0DEAFBFDB /* CalisthenicsView.swift */; };
+		C16E0656E3BE4C7EFFFBABB6 /* Backup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536AFA980B18BE65091D8B8B /* Backup.swift */; };
+		C6E23D4512FA0696F77AC83D /* SharedSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A959AD7D8CFF4E17740E25AC /* SharedSnapshot.swift */; };
+		D59E91B6619CA2846059B3DB /* WatchShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62B895CB95DB95D2863D525D /* WatchShared.swift */; };
+		DAE3197B5F96EB3C1D8359E5 /* LiveWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB54D75ED748BA99796B41E /* LiveWorkout.swift */; };
+		DD277802997E85D153523ED1 /* NutritionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5DCA0D900EFA97773CB978 /* NutritionService.swift */; };
+		DF1D6DEBA3AD4E02A4FB27BC /* FriendsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC3498B7B8114D89E6225C5 /* FriendsService.swift */; };
+		ECC1C320A4AD816E02697F13 /* WidgetGymLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06CA7674B4F93080A838FE09 /* WidgetGymLog.swift */; };
+		F08B2E853F77B6F8E9CDEFAE /* WorkoutOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A5502DED43BF6A008753440 /* WorkoutOptionsView.swift */; };
+		F185030C1065770BDEC0D3AF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA94A01C27856F729F1F8F08 /* Theme.swift */; };
+		F2905E16DAD3EAD6B7E0DD59 /* FoodView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76984DD942C58B4ACAEE58BD /* FoodView.swift */; };
+		FA6466D39EC32B12BA201BF8 /* GymLogWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D62A4CE2B9CD0E1DD6F82110 /* GymLogWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FE803AED97E2E24FC5C7BEDE /* SharedSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A959AD7D8CFF4E17740E25AC /* SharedSnapshot.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8659C052A967446B5B70AD15 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 603D7722CBD262630C74AE51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 071FF3AD34E62089B3456D5B;
+			remoteInfo = GymLogWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FF01F62AE5C21E9AEFB2185E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FA6466D39EC32B12BA201BF8 /* GymLogWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		06CA7674B4F93080A838FE09 /* WidgetGymLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetGymLog.swift; sourceTree = "<group>"; };
+		138B3960F9FD020E3F9E8260 /* GymLogWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GymLogWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1AC3498B7B8114D89E6225C5 /* FriendsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsService.swift; sourceTree = "<group>"; };
+		1E4DD401DA69BA2EB3F58526 /* Training.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Training.swift; sourceTree = "<group>"; };
+		23067C49AA77D4107070A07C /* BulkHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkHelper.swift; sourceTree = "<group>"; };
+		339D86B915AF37011639C498 /* PhoneBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneBridge.swift; sourceTree = "<group>"; };
+		44807DA1C4F7DEBF0D6FB897 /* CoachView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachView.swift; sourceTree = "<group>"; };
+		45639B71344B6AA0DEAFBFDB /* CalisthenicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalisthenicsView.swift; sourceTree = "<group>"; };
+		4A3A94819D4A8F0D64344872 /* FormTips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormTips.swift; sourceTree = "<group>"; };
+		536AFA980B18BE65091D8B8B /* Backup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backup.swift; sourceTree = "<group>"; };
+		62B895CB95DB95D2863D525D /* WatchShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchShared.swift; sourceTree = "<group>"; };
+		6D3564BA93B433F535B5C4EA /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		748C9E01E39B5B4283934369 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
+		76984DD942C58B4ACAEE58BD /* FoodView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodView.swift; sourceTree = "<group>"; };
+		8A5502DED43BF6A008753440 /* WorkoutOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutOptionsView.swift; sourceTree = "<group>"; };
+		8EB54D75ED748BA99796B41E /* LiveWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkout.swift; sourceTree = "<group>"; };
+		989081A9AA272D1ABA0B1553 /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
+		A959AD7D8CFF4E17740E25AC /* SharedSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSnapshot.swift; sourceTree = "<group>"; };
+		AA4719AC2029CEDEAB7EDCBC /* WatchHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHealth.swift; sourceTree = "<group>"; };
+		AA94A01C27856F729F1F8F08 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		AB9EF5A1A7151DAC58C04CA0 /* Program.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Program.swift; sourceTree = "<group>"; };
+		ABD1EC19BBD56064EC8780B5 /* WidgetLiveWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetLiveWorkout.swift; sourceTree = "<group>"; };
+		AFC2964B17F47B5082242091 /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
+		B1CCD26A241785A49A6EE9A2 /* WidgetWaterIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetWaterIntent.swift; sourceTree = "<group>"; };
+		B201FBB6BF31386669E15A21 /* ProgramEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramEditorView.swift; sourceTree = "<group>"; };
+		B3B1DFD6F2A23887A8CCA3F8 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		B871489FC8D02A22D861404A /* GymLogApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymLogApp.swift; sourceTree = "<group>"; };
+		CBA7A7871C83063760338C8D /* LiftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiftsView.swift; sourceTree = "<group>"; };
+		CCDE19405EE5540CD7454177 /* BackupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupView.swift; sourceTree = "<group>"; };
+		D17D4BECF572608E7DCC7AF5 /* Services.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services.swift; sourceTree = "<group>"; };
+		D62A4CE2B9CD0E1DD6F82110 /* GymLogWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GymLogWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD5DCA0D900EFA97773CB978 /* NutritionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NutritionService.swift; sourceTree = "<group>"; };
+		DE0C34B22CD5D17F7A958001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EBD7B80AEABA1F895057BBB0 /* CalendarSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSync.swift; sourceTree = "<group>"; };
+		F0F5717C5CB563AFEC7136BF /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
+		FA62A2E7F49EC397F6F24219 /* WatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
+		FCA764FA32F98D44AA6F7998 /* WaterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterView.swift; sourceTree = "<group>"; };
+		FF1DE01E833528FC1C5E9D87 /* GymLog.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GymLog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		"TEMP_F5364B20-C42F-4CFF-9F0E-DD555B7B59FA" /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1E79CF4A91A6362D4F565AEF = {
+			isa = PBXGroup;
+			children = (
+				532233CDB4E9A2511BCC8FE8 /* Gym-app */,
+				9D524C8FFA7DD8453FBD0D10 /* Watch */,
+				34BD467E8B122849F21D54BE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		34BD467E8B122849F21D54BE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FF1DE01E833528FC1C5E9D87 /* GymLog.app */,
+				138B3960F9FD020E3F9E8260 /* GymLogWatch.app */,
+				D62A4CE2B9CD0E1DD6F82110 /* GymLogWidget.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		532233CDB4E9A2511BCC8FE8 /* Gym-app */ = {
+			isa = PBXGroup;
+			children = (
+				536AFA980B18BE65091D8B8B /* Backup.swift */,
+				CCDE19405EE5540CD7454177 /* BackupView.swift */,
+				23067C49AA77D4107070A07C /* BulkHelper.swift */,
+				EBD7B80AEABA1F895057BBB0 /* CalendarSync.swift */,
+				989081A9AA272D1ABA0B1553 /* CalendarView.swift */,
+				45639B71344B6AA0DEAFBFDB /* CalisthenicsView.swift */,
+				44807DA1C4F7DEBF0D6FB897 /* CoachView.swift */,
+				76984DD942C58B4ACAEE58BD /* FoodView.swift */,
+				4A3A94819D4A8F0D64344872 /* FormTips.swift */,
+				1AC3498B7B8114D89E6225C5 /* FriendsService.swift */,
+				AFC2964B17F47B5082242091 /* FriendsView.swift */,
+				B871489FC8D02A22D861404A /* GymLogApp.swift */,
+				F0F5717C5CB563AFEC7136BF /* InsightsView.swift */,
+				CBA7A7871C83063760338C8D /* LiftsView.swift */,
+				8EB54D75ED748BA99796B41E /* LiveWorkout.swift */,
+				B3B1DFD6F2A23887A8CCA3F8 /* Models.swift */,
+				DD5DCA0D900EFA97773CB978 /* NutritionService.swift */,
+				339D86B915AF37011639C498 /* PhoneBridge.swift */,
+				AB9EF5A1A7151DAC58C04CA0 /* Program.swift */,
+				B201FBB6BF31386669E15A21 /* ProgramEditorView.swift */,
+				D17D4BECF572608E7DCC7AF5 /* Services.swift */,
+				6D3564BA93B433F535B5C4EA /* SettingsView.swift */,
+				A959AD7D8CFF4E17740E25AC /* SharedSnapshot.swift */,
+				AA94A01C27856F729F1F8F08 /* Theme.swift */,
+				1E4DD401DA69BA2EB3F58526 /* Training.swift */,
+				FCA764FA32F98D44AA6F7998 /* WaterView.swift */,
+				06CA7674B4F93080A838FE09 /* WidgetGymLog.swift */,
+				ABD1EC19BBD56064EC8780B5 /* WidgetLiveWorkout.swift */,
+				B1CCD26A241785A49A6EE9A2 /* WidgetWaterIntent.swift */,
+				8A5502DED43BF6A008753440 /* WorkoutOptionsView.swift */,
+				748C9E01E39B5B4283934369 /* WorkoutView.swift */,
+			);
+			name = "Gym-app";
+			path = .;
+			sourceTree = "<group>";
+		};
+		9D524C8FFA7DD8453FBD0D10 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				DE0C34B22CD5D17F7A958001 /* Assets.xcassets */,
+				FA62A2E7F49EC397F6F24219 /* WatchApp.swift */,
+				AA4719AC2029CEDEAB7EDCBC /* WatchHealth.swift */,
+				62B895CB95DB95D2863D525D /* WatchShared.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		071FF3AD34E62089B3456D5B /* GymLogWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8998E6B22C0ACF8DA1792A80 /* Build configuration list for PBXNativeTarget "GymLogWidget" */;
+			buildPhases = (
+				F3D3702F6479941FEDB2CF38 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GymLogWidget;
+			packageProductDependencies = (
+			);
+			productName = GymLogWidget;
+			productReference = D62A4CE2B9CD0E1DD6F82110 /* GymLogWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		B121509998DF0A47D4E3FC9D /* GymLogWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70C1C7B43AB833D12B8041D6 /* Build configuration list for PBXNativeTarget "GymLogWatch" */;
+			buildPhases = (
+				4E00281FB971CA5E3124C371 /* Sources */,
+				84AF1B5D8C477335A6B91BFB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GymLogWatch;
+			packageProductDependencies = (
+			);
+			productName = GymLogWatch;
+			productReference = 138B3960F9FD020E3F9E8260 /* GymLogWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F3E1764F4BC6D867599A372E /* GymLog */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B82AC5F1C6EE4FE63FE1FBD9 /* Build configuration list for PBXNativeTarget "GymLog" */;
+			buildPhases = (
+				5029C39FB53EEBF114BF6419 /* Sources */,
+				6136C586D827F6A41446FFEC /* Resources */,
+				FF01F62AE5C21E9AEFB2185E /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5033A8FC379AA4A52A6A572D /* PBXTargetDependency */,
+			);
+			name = GymLog;
+			packageProductDependencies = (
+			);
+			productName = GymLog;
+			productReference = FF1DE01E833528FC1C5E9D87 /* GymLog.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		603D7722CBD262630C74AE51 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					071FF3AD34E62089B3456D5B = {
+						DevelopmentTeam = FUR4UGH9HT;
+						ProvisioningStyle = Automatic;
+					};
+					B121509998DF0A47D4E3FC9D = {
+						DevelopmentTeam = FUR4UGH9HT;
+						ProvisioningStyle = Automatic;
+					};
+					F3E1764F4BC6D867599A372E = {
+						DevelopmentTeam = FUR4UGH9HT;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 1A1FD769F16AFB936057A37F /* Build configuration list for PBXProject "GymLog" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 1E79CF4A91A6362D4F565AEF;
+			minimizedProjectReferenceProxies = 1;
+			productRefGroup = 34BD467E8B122849F21D54BE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F3E1764F4BC6D867599A372E /* GymLog */,
+				071FF3AD34E62089B3456D5B /* GymLogWidget */,
+				B121509998DF0A47D4E3FC9D /* GymLogWatch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6136C586D827F6A41446FFEC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				416BD9CA64CA8064A8D7520F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		84AF1B5D8C477335A6B91BFB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8755D561157A3BAC0779DEB2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4E00281FB971CA5E3124C371 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15FFE5077CDCBBF0D8C2AEA3 /* WatchApp.swift in Sources */,
+				7FE4BA0558B0696C7E479331 /* WatchHealth.swift in Sources */,
+				D59E91B6619CA2846059B3DB /* WatchShared.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5029C39FB53EEBF114BF6419 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C16E0656E3BE4C7EFFFBABB6 /* Backup.swift in Sources */,
+				02D3E1E27F7959E51E4F5925 /* BackupView.swift in Sources */,
+				8D55D17FB71D9B1D901CABC6 /* BulkHelper.swift in Sources */,
+				728BDF5A5737E7D451D96460 /* CalendarSync.swift in Sources */,
+				1BA371ECD1823C2440A34EB3 /* CalendarView.swift in Sources */,
+				AD59D173B912133A2498C0BF /* CalisthenicsView.swift in Sources */,
+				4A7A2C012F6BE763FBE4AA25 /* CoachView.swift in Sources */,
+				F2905E16DAD3EAD6B7E0DD59 /* FoodView.swift in Sources */,
+				93FEC75FE32F05FB74761DA6 /* FormTips.swift in Sources */,
+				DF1D6DEBA3AD4E02A4FB27BC /* FriendsService.swift in Sources */,
+				30C8EA48AC3810C53F0C36D1 /* FriendsView.swift in Sources */,
+				1B0B26D0FF4A52D0BE993034 /* GymLogApp.swift in Sources */,
+				4D415FD1AC1E72D59AA6E5EA /* InsightsView.swift in Sources */,
+				932FBCDBBE71C9C48B320E4F /* LiftsView.swift in Sources */,
+				DAE3197B5F96EB3C1D8359E5 /* LiveWorkout.swift in Sources */,
+				17BF265355FEFB9516240711 /* Models.swift in Sources */,
+				DD277802997E85D153523ED1 /* NutritionService.swift in Sources */,
+				9955623D6F3EAF90E64454AC /* PhoneBridge.swift in Sources */,
+				0A7882EE66BF9FA432E22031 /* Program.swift in Sources */,
+				422492E508F218EFD8CD7197 /* ProgramEditorView.swift in Sources */,
+				41FFE0AAFA895928CE32C728 /* Services.swift in Sources */,
+				0C7204C35B08568A81AB188B /* SettingsView.swift in Sources */,
+				FE803AED97E2E24FC5C7BEDE /* SharedSnapshot.swift in Sources */,
+				F185030C1065770BDEC0D3AF /* Theme.swift in Sources */,
+				43F49787138F53BE2E8DFF08 /* Training.swift in Sources */,
+				AB290EC996488FC50C5197E0 /* WatchShared.swift in Sources */,
+				8B5FF864FD5E169FD9E4CEFA /* WaterView.swift in Sources */,
+				F08B2E853F77B6F8E9CDEFAE /* WorkoutOptionsView.swift in Sources */,
+				1A0FD8C175A34BCEA9C3B95E /* WorkoutView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F3D3702F6479941FEDB2CF38 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C6E23D4512FA0696F77AC83D /* SharedSnapshot.swift in Sources */,
+				ECC1C320A4AD816E02697F13 /* WidgetGymLog.swift in Sources */,
+				A3F5A029D7B366D7A6EDC390 /* WidgetLiveWorkout.swift in Sources */,
+				343E55997187CC6294343024 /* WidgetWaterIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5033A8FC379AA4A52A6A572D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 071FF3AD34E62089B3456D5B /* GymLogWidget */;
+			targetProxy = 8659C052A967446B5B70AD15 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		17DD03C9D8F5E160FAFF2396 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GymLogWatch.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WatchInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Gym Log";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym Log reads your heart rate and calories during workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym Log saves your strength workouts to Apple Health.";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.surproductions.gymlog;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.surproductions.gymlog.watchkitapp;
+				PRODUCT_NAME = GymLogWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		3AD235867F70E207FDC55021 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = GymLogWidget.entitlements;
+				INFOPLIST_FILE = WidgetInfo.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.surproductions.gymlog.widget;
+				PRODUCT_NAME = GymLogWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		6001F047EC6C888547BC6477 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = GymLogWidget.entitlements;
+				INFOPLIST_FILE = WidgetInfo.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.surproductions.gymlog.widget;
+				PRODUCT_NAME = GymLogWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		75AFC6BCB4234479637555D1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = GymLogWatch.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = WatchInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Gym Log";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym Log reads your heart rate and calories during workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym Log saves your strength workouts to Apple Health.";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.surproductions.gymlog;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = com.surproductions.gymlog.watchkitapp;
+				PRODUCT_NAME = GymLogWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		79136F8E896E32BBA33A00D0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Light AppIcon-Mono AppIcon-Crimson AppIcon-Forest AppIcon-Midnight AppIcon-Neon AppIcon-Sunset AppIcon-Ocean AppIcon-Cockpit AppIcon-Gold AppIcon-Camo AppIcon-Vapor AppIcon-Acid AppIcon-Beast";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = GymLog.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Gym Log";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Gym Log adds your upcoming gym days to your calendar and keeps them updated.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gym Log uses the camera to photograph meals so Claude can estimate their calories and nutrition.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym Log reads heart rate and calories from your Apple Watch workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym Log saves your Apple Watch strength workouts to Apple Health.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Gym Log lets you pick a meal photo so Claude can estimate its calories and nutrition.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.surproductions.gymlog;
+				PRODUCT_NAME = GymLog;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		8544F27674DE620614CF3E0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Light AppIcon-Mono AppIcon-Crimson AppIcon-Forest AppIcon-Midnight AppIcon-Neon AppIcon-Sunset AppIcon-Ocean AppIcon-Cockpit AppIcon-Gold AppIcon-Camo AppIcon-Vapor AppIcon-Acid AppIcon-Beast";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = GymLog.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Gym Log";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Gym Log adds your upcoming gym days to your calendar and keeps them updated.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Gym Log uses the camera to photograph meals so Claude can estimate their calories and nutrition.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Gym Log reads heart rate and calories from your Apple Watch workouts.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Gym Log saves your Apple Watch strength workouts to Apple Health.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Gym Log lets you pick a meal photo so Claude can estimate its calories and nutrition.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.surproductions.gymlog;
+				PRODUCT_NAME = GymLog;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BB78277A682D8ECCBDA491C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FUR4UGH9HT;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.7;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F2D5228BB185D499760C596C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 8;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = FUR4UGH9HT;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.7;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A1FD769F16AFB936057A37F /* Build configuration list for PBXProject "GymLog" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB78277A682D8ECCBDA491C8 /* Debug */,
+				F2D5228BB185D499760C596C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		70C1C7B43AB833D12B8041D6 /* Build configuration list for PBXNativeTarget "GymLogWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				75AFC6BCB4234479637555D1 /* Debug */,
+				17DD03C9D8F5E160FAFF2396 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8998E6B22C0ACF8DA1792A80 /* Build configuration list for PBXNativeTarget "GymLogWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6001F047EC6C888547BC6477 /* Debug */,
+				3AD235867F70E207FDC55021 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B82AC5F1C6EE4FE63FE1FBD9 /* Build configuration list for PBXNativeTarget "GymLog" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79136F8E896E32BBA33A00D0 /* Debug */,
+				8544F27674DE620614CF3E0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 603D7722CBD262630C74AE51 /* Project object */;
+}
