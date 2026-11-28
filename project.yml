@@ -7,8 +7,8 @@ options:
     iOS: "17.0"
 settings:
   base:
-    MARKETING_VERSION: "1.6"
-    CURRENT_PROJECT_VERSION: "7"
+    MARKETING_VERSION: "1.7"
+    CURRENT_PROJECT_VERSION: "8"
     TARGETED_DEVICE_FAMILY: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -43,6 +43,7 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.surproductions.gymlog
+        aps-environment: development
     scheme: {}
     settings:
       base:

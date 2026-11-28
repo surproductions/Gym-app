@@ -89,6 +89,11 @@ struct FriendsSection: View {
                 } label: {
                     Label("What friends can see", systemImage: "eye")
                 }
+
+                ShareLink(item: AppUpdate.installURL,
+                          message: Text("Get Gym Log (or update it): open this link on your iPhone and tap Install.")) {
+                    Label("Share the app install link", systemImage: "link")
+                }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("See your friends' workouts, PRs, weight and food, and let them see yours. You pick what to share.")

@@ -1,0 +1,41 @@
+name: Publish build
+
+# Push an exported Ad Hoc build to the `release` branch (release/GymLog.ipa + release/info.json)
+# and this uploads it to Supabase, so everyone can update from the install link.
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # lets the job prove to Supabase that it's this repo
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload to Supabase
+        env:
+          FN: https://ojhfdyfeaxppvfcfacga.supabase.co/functions/v1/release
+        run: |
+          set -euo pipefail
+          test -f release/GymLog.ipa
+          INFO=$(cat release/info.json)
+          OIDC=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=gymlog-release" | jq -r .value)
+          URLS=$(curl -sS --fail-with-body -X POST "$FN?step=start" -H "x-github-oidc: $OIDC" \
+            -H "Content-Type: application/json" -d "$INFO")
+          IPA_URL=$(echo "$URLS" | jq -r .ipa)
+          ICON_URL=$(echo "$URLS" | jq -r .icon)
+          curl -sS --fail-with-body -X PUT "$IPA_URL" -H "Content-Type: application/octet-stream" \
+            -H "x-upsert: true" --data-binary @release/GymLog.ipa
+          python3 -c "from PIL import Image" 2>/dev/null || pip install -q pillow
+          python3 -c "from PIL import Image; Image.open('AppIcon.png').convert('RGB').resize((512,512)).save('/tmp/icon.png')"
+          curl -sS --fail-with-body -X PUT "$ICON_URL" -H "Content-Type: image/png" \
+            -H "x-upsert: true" --data-binary @/tmp/icon.png
+          curl -sS --fail-with-body -X POST "$FN?step=finish" -H "x-github-oidc: $OIDC" \
+            -H "Content-Type: application/json" -d "$INFO"
+          echo
+          echo "Install link: https://ojhfdyfeaxppvfcfacga.supabase.co/functions/v1/install"

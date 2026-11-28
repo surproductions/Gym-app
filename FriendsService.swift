@@ -3,6 +3,7 @@ import CryptoKit
 import Foundation
 import Observation
 import SwiftData
+import UIKit
 import UserNotifications
 
 // MARK: - What a friend can see (uploaded by each phone, trimmed by the server to what they share)
@@ -139,6 +140,8 @@ struct Cheer: Codable, Identifiable {
     var emoji: String
     var message: String?
     var at: Date
+    /// True when it was already delivered as a push notification.
+    var pushed: Bool? = nil
 }
 
 // MARK: - Server calls
@@ -254,7 +257,9 @@ final class FriendsStore {
             self.me = me
             FriendsIdentity.cache(me, for: self.personID)
             FriendsSync.requestPush()
-            _ = await Reminders.requestPermission()   // so cheers can show as notifications
+            if await Reminders.requestPermission() {   // so cheers can show as notifications
+                UIApplication.shared.registerForRemoteNotifications()
+            }
         }
     }
 
@@ -380,7 +385,7 @@ enum FriendsSync {
             var all = recentCheers(p.id) + new
             all = Array(all.suffix(30))
             if let d = try? JSONEncoder().encode(all) { UserDefaults.standard.set(d, forKey: cheersKey(p.id)) }
-            for c in new {
+            for c in new where c.pushed != true {
                 let content = UNMutableNotificationContent()
                 content.title = "\(c.emoji) \(c.from)"
                 content.body = (c.message?.isEmpty == false ? c.message! : "sent you a cheer")
@@ -440,5 +445,70 @@ enum FriendsBackground {
             bodies: (try? ctx.fetch(FetchDescriptor<BodyWeight>())) ?? [],
             foods: (try? ctx.fetch(FetchDescriptor<FoodEntry>())) ?? [],
             water: (try? ctx.fetch(FetchDescriptor<WaterEntry>())) ?? [])
+    }
+}
+
+// MARK: - Push notifications (instant nudges)
+
+enum PushRegistration {
+    static let tokenKey = "apnsToken"
+
+    /// Xcode (Debug) builds use Apple's sandbox push server; install-link builds use production.
+    static var environment: String {
+        #if DEBUG
+        return "sandbox"
+        #else
+        return "production"
+        #endif
+    }
+
+    /// Ask iOS for a push token if notifications are allowed.
+    static func registerIfAllowed() {
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            guard s.authorizationStatus == .authorized || s.authorizationStatus == .provisional else { return }
+            DispatchQueue.main.async { UIApplication.shared.registerForRemoteNotifications() }
+        }
+    }
+
+    static func received(_ deviceToken: Data) {
+        let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
+        UserDefaults.standard.set(hex, forKey: tokenKey)
+        Task { await upload() }
+    }
+
+    /// Tell the server this phone's token for every person here who shares with friends.
+    @MainActor
+    static func upload() async {
+        guard let token = UserDefaults.standard.string(forKey: tokenKey) else { return }
+        let people = (try? AppModel.container.mainContext.fetch(FetchDescriptor<Person>())) ?? []
+        for p in people {
+            guard let secret = FriendsIdentity.secret(for: p.id), FriendsIdentity.cachedMe(p.id) != nil else { continue }
+            _ = try? await FriendsAPI.call("gl_set_push", ["p_secret": secret, "p_token": token, "p_env": environment])
+        }
+    }
+}
+
+// MARK: - New builds from the install link
+
+struct AppRelease: Codable, Equatable {
+    var version: String?
+    var build: Int?
+    var notes: String?
+    var install_url: String?
+}
+
+enum AppUpdate {
+    static let installURL = URL(string: "https://ojhfdyfeaxppvfcfacga.supabase.co/functions/v1/install")!
+
+    static var currentBuild: Int {
+        Int(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0") ?? 0
+    }
+
+    /// The newest published build, if it's newer than this one.
+    static func check() async -> AppRelease? {
+        guard let data = try? await FriendsAPI.call("gl_latest_release", [:]),
+              let r = try? JSONDecoder().decode(AppRelease.self, from: data),
+              let b = r.build, b > currentBuild else { return nil }
+        return r
     }
 }

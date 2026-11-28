@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// One shared database so the Apple Watch bridge can save sets and water too.
 enum AppModel {
@@ -50,6 +51,8 @@ struct ContentView: View {
     @AppStorage(CalendarSync.lengthKey) private var calendarLength = 60
     @AppStorage(CalendarSync.nonceKey) private var calendarNonce = 0
     @AppStorage(FriendsSync.pushNonceKey) private var friendsNonce = 0
+    @AppStorage("dismissedUpdateBuild") private var dismissedUpdateBuild = 0
+    @State private var update: AppRelease?
     @AppStorage(TrainingSettings.splitModeKey) private var splitMode = SplitMode.shift.rawValue
     @AppStorage(ThemeSettings.key) private var themeID = Theme.classic.id
 
@@ -100,7 +103,11 @@ struct ContentView: View {
             if phase == .active {
                 ingestWidgetWater()
                 syncWater()
-                Task { await FriendsSync.checkInbox(people: people) }
+                Task {
+                    await FriendsSync.checkInbox(people: people)
+                    await PushRegistration.upload()
+                    if let r = await AppUpdate.check(), (r.build ?? 0) > dismissedUpdateBuild { update = r }
+                }
             }
             if phase == .background {
                 AutoBackup.run(context: context)
@@ -116,6 +123,18 @@ struct ContentView: View {
             await pushFriends()
         }
         .task(id: friendsNonce) { await pushFriends() }
+        .alert("Gym Log \(update?.version ?? "") is out", isPresented: Binding(get: { update != nil }, set: { if !$0 { update = nil } })) {
+            Button("Install") {
+                UIApplication.shared.open(AppUpdate.installURL)
+                update = nil
+            }
+            Button("Later", role: .cancel) {
+                dismissedUpdateBuild = update?.build ?? 0
+                update = nil
+            }
+        } message: {
+            Text((update?.notes.map { $0 + "\n\n" } ?? "") + "Tap Install, then Install again on the pop-up. Your data stays.")
+        }
     }
 
     /// Uploads what friends can see (only for people who turned on sharing).
